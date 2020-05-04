@@ -36,7 +36,7 @@ void multipath_tv_channel(channel_desc_t *desc,
                           double **tx_sig_im,
                           double **rx_sig_re,
                           double **rx_sig_im,
-                          uint16_t length,
+                          uint32_t length,
                           uint8_t keep_channel) {
   double complex **tx,**rx,* **H_t,*rx_temp; //, *tv_H_t;
   double path_loss = pow(10,desc->path_loss_dB/20);

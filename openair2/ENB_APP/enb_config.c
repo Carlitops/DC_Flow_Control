@@ -3110,3 +3110,32 @@ void read_config_and_init(void) {
 
   RCconfig_flexran();
 }
+
+
+int RCconfig_DC(void){
+	paramdef_t		DCParams[]	 = DCPARAMS_DESC;
+	config_get(DCParams, sizeof(DCParams)/sizeof(paramdef_t), ENB_CONFIG_STRING_DC_CONFIG);
+
+	RC.dc_eNB_dataP = (dc_eNB_data_t *)malloc(sizeof(dc_eNB_data_t));
+
+	if (strcasecmp(*(DCParams[DC_ENABLED_IDX].strptr), "yes") == 0){
+		RC.dc_eNB_dataP->enable = TRUE;
+		RC.dc_eNB_dataP->x2u_port = *DCParams[DC_PORT_FOR_X2U_IDX].uptr;
+		RC.dc_eNB_dataP->flow_control_type = *DCParams[DC_FLOW_CONTROL_TYPE_IDX].uptr;
+		strcpy(RC.dc_eNB_dataP->remote_eNB_address,*(DCParams[DC_REMOTE_ENB_ADDRESS_IDX].strptr));
+
+		if(strcasecmp(*(DCParams[DC_ENB_TYPE_IDX].strptr), "MeNB") == 0){
+			RC.dc_eNB_dataP->eNB_type = 1;
+		} else if (strcasecmp(*(DCParams[DC_ENB_TYPE_IDX].strptr), "SeNB") == 0){
+			RC.dc_eNB_dataP->eNB_type = 2;
+		} else {
+			printf("Error, the eNB is neither MeNB nor SeNB\n");
+			RC.dc_eNB_dataP->enable = FALSE;
+			return 0;
+		}
+		return 1;
+	}else {
+		RC.dc_eNB_dataP->enable = FALSE;
+		return 0;
+	}
+}

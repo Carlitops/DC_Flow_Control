@@ -53,6 +53,9 @@
 #include "RRC/LTE/rrc_defs.h"
 #include "RRC/NR/nr_rrc_defs.h"
 
+#include "x2u_procedures.h"
+#include "ue_dc.h"
+
 
 typedef struct {
   /// RAN context config file name
@@ -117,6 +120,8 @@ typedef struct {
   pthread_mutex_t ru_mutex;
   /// condition variable for signaling setup completion of an RU
   pthread_cond_t ru_cond;
+  dc_eNB_data_t	*dc_eNB_dataP;
+  dc_ue_data_t	*dc_ue_dataP;
 } RAN_CONTEXT_t;
 
 

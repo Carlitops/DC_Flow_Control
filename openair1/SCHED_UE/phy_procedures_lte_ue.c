@@ -62,6 +62,10 @@
 
 #include "PHY/TOOLS/tools_defs.h"
 
+#include "common/ran_context.h"
+
+extern RAN_CONTEXT_t RC;
+
 #define DLSCH_RB_ALLOC 0x1fbf  // skip DC RB (total 23/25 RBs)
 #define DLSCH_RB_ALLOC_12 0x0aaa  // skip DC RB (total 23/25 RBs)
 
@@ -4857,6 +4861,7 @@ int phy_procedures_UE_RX(PHY_VARS_UE *ue,
       }
     }
   }
+
 
   if ( LOG_DEBUGFLAG(UE_TIMING)) {
     stop_meas(&ue->generic_stat);

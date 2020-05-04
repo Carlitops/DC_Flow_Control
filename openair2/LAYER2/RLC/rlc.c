@@ -36,8 +36,10 @@
 #include "common/utils/LOG/vcd_signal_dumper.h"
 #include "targets/COMMON/openairinterface5g_limits.h"
 #include "assertions.h"
-
 #include "common/ran_context.h"
+#include "ue_dc_messages_types.h"
+#include "pdcp_reordering.h"
+
 extern RAN_CONTEXT_t RC;
 
 extern boolean_t pdcp_data_ind(
@@ -462,7 +464,7 @@ rlc_op_status_t rlc_data_req     (const protocol_ctxt_t *const ctxt_pP,
          * much memory and store at maximum 5 millions bytes.
          */
         /* look for HACK_RLC_UM_LIMIT for others places related to the hack. Please do not remove this comment. */
-        if (rlc_um_get_buffer_occupancy(&rlc_union_p->rlc.um) > 5000000) {
+        if (rlc_um_get_buffer_occupancy(&rlc_union_p->rlc.um) > 8000000) {
           free_mem_block(sdu_pP, __func__);
           return RLC_OP_STATUS_OUT_OF_RESSOURCES;
         }
@@ -582,9 +584,33 @@ void rlc_data_ind     (
       itti_send_msg_to_task(TASK_DU_F1, ENB_MODULE_ID_TO_INSTANCE(ctxt_pP->module_id), msg);
       return;
     }
-  } // case monolithic eNodeB or UE
+    // case monolithic eNodeB or UE
+    get_pdcp_data_ind_func()(ctxt_pP, srb_flagP, MBMS_flagP, rb_idP, sdu_sizeP, sdu_pP,NULL,NULL);
 
-  get_pdcp_data_ind_func()(ctxt_pP, srb_flagP, MBMS_flagP, rb_idP, sdu_sizeP, sdu_pP,NULL,NULL);
+  } else if (srb_flagP == 0 && RC.dc_ue_dataP->enabled == TRUE && RC.dc_ue_dataP->ue_type == sUE){
+	  MessageDef	*msg_p = NULL;
+	  unsigned char *new_pdu;
+
+	  msg_p = itti_alloc_new_message(TASK_RLC_UE, DC_UE_DATA_REQ);
+	  new_pdu = (unsigned char *)malloc(sdu_sizeP);
+	  memcpy(new_pdu, sdu_pP->data, sdu_sizeP);
+	  DC_UE_DATA_REQ(msg_p).pdu_size_dc = sdu_sizeP;
+	  DC_UE_DATA_REQ(msg_p).pdu_buffer_dcP = new_pdu;
+
+	  if (itti_send_msg_to_task(TASK_UE_DC, INSTANCE_DEFAULT, msg_p) != 0){
+		  printf("RLC, Error sending Split Bearer PDU to UE_DC\n");
+	  }
+	  free(sdu_pP);
+  } else if((ctxt_pP->enb_flag == ENB_FLAG_NO) && (srb_flagP == 0) && RC.dc_ue_dataP->enabled == TRUE && (RC.dc_ue_dataP->reordering == TRUE)){
+	  //add_in_pdcp_temp_buffer(sdu_pP->data,sdu_sizeP, RLC_MN);
+	  //free(sdu_pP);
+
+	  pthread_mutex_lock(&RC.dc_ue_dataP->reordering_utils.temp_buffer);
+	  get_pdcp_data_ind_func()(ctxt_pP, srb_flagP, MBMS_flagP, rb_idP, sdu_sizeP, sdu_pP,NULL,NULL);
+	  pthread_mutex_unlock(&RC.dc_ue_dataP->reordering_utils.temp_buffer);
+  } else
+	  get_pdcp_data_ind_func()(ctxt_pP, srb_flagP, MBMS_flagP, rb_idP, sdu_sizeP, sdu_pP,NULL,NULL);
+
 }
 //-----------------------------------------------------------------------------
 void rlc_data_conf     (const protocol_ctxt_t *const ctxt_pP,

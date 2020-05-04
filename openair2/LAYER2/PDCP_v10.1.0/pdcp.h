@@ -49,6 +49,7 @@
 #include "LTE_MBMS-SessionInfoList-r9.h"
 #include "LTE_PMCH-InfoList-r9.h"
 
+#define RANDOM_VECTOR_SIZE 40
 
 typedef rlc_op_status_t  (*send_rlc_data_req_func_t)(const protocol_ctxt_t *const,
     const srb_flag_t, const MBMS_flag_t,
@@ -206,7 +207,8 @@ typedef struct pdcp_s {
   /*
    * SN of the last PDCP SDU delivered to upper layers
    */
-  pdcp_sn_t  last_submitted_pdcp_rx_sn;
+  pdcp_sn_t		last_submitted_pdcp_rx_sn;
+  pdcp_hfn_t	last_submitted_pdcp_rx_hfn;
 
   /*
    * Following array is used as a bitmap holding missing sequence
@@ -219,6 +221,19 @@ typedef struct pdcp_s {
    * which is not also a valid sequence number
    */
   short int first_missing_pdu;
+
+  /* Variables for PDCP Reordering as detailed in 5.2.2.1 of 38.323v15.2*/
+  pdcp_sn_t		rx_next_sn; //
+  pdcp_hfn_t	rx_next_hfn;
+  pdcp_sn_t		rx_deliv_sn; //First SDU_SN not delivered to upper layers, but still waited for
+  pdcp_hfn_t	rx_deliv_hfn;
+  pdcp_sn_t		rx_reord_sn; // The PDU for which t_reordering is running
+  pdcp_hfn_t	rx_reord_hfn;
+  boolean_t		t_reordering_running; // t_reordering ACTIVE or NOT
+
+  pdcp_sn_t		RandomVector[RANDOM_VECTOR_SIZE];
+  int			RVcounter;
+  uint64_t		PDUs_counter;
 
 } pdcp_t;
 

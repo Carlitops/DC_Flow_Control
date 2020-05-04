@@ -36,6 +36,7 @@
   #include "RRC/LTE/rrc_defs.h"
 #endif
 # include "enb_app.h"
+#include "ue_dc.h"
 
 int create_tasks_ue(uint32_t ue_nb) {
   LOG_D(ENB_APP, "%s(ue_nb:%d)\n", __FUNCTION__, ue_nb);
@@ -65,6 +66,19 @@ int create_tasks_ue(uint32_t ue_nb) {
       LOG_E(RRC, "Create task for RRC UE failed\n");
       return -1;
     }
+
+    if (is_dc_ue_enabled()){
+    	if(itti_create_task (TASK_UE_DC, ue_dc_task, NULL) < 0){
+    	printf("UE_DC, Create task for UE_DC has failed\n");
+    	return -1;
+    	}
+
+    	if(itti_create_task (TASK_UDP_UE, udp_ue_task, NULL) < 0){
+    		printf("UDP_UE, Create task for UDP_UE has failed\n");
+    		return -1;
+    	}
+    }
+
   }
 
   itti_wait_ready(0);

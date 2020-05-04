@@ -41,6 +41,7 @@
 # include "f1ap_du_task.h"
 # include "enb_app.h"
 # include "openair2/LAYER2/MAC/mac_proto.h"
+#include "x2u_procedures.h"
 
 extern RAN_CONTEXT_t RC;
 
@@ -79,6 +80,13 @@ int create_tasks(uint32_t enb_nb) {
     } else {
       LOG_I(X2AP, "X2AP is disabled.\n");
     }
+
+    if (is_DC_enabled()){
+        rc = itti_create_task(TASK_X2U, x2u_eNB_task, NULL);
+        AssertFatal(rc >= 0, "Create task for X2U failed\n");
+    } else
+       	printf("X2U is disabled\n");
+
   }
 
   if (NODE_IS_CU(type)) {

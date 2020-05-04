@@ -45,6 +45,8 @@
 #include "assertions.h"
 #include "conversions.h"
 
+#include "x2u_procedures.h"
+
 static
 int x2ap_eNB_handle_x2_setup_request (instance_t instance,
                                       uint32_t assoc_id,
@@ -600,6 +602,9 @@ int x2ap_eNB_handle_x2_setup_response(instance_t instance,
   x2ap_handle_x2_setup_message(instance_p, x2ap_eNB_data, 0);
 
   itti_send_msg_to_task(TASK_RRC_ENB, instance_p->instance, msg);
+
+  //Dual Connectivity
+  x2u_init_for_dc(instance_p->enb_x2_ip_address.ipv4_address);
 
   return 0;
 }

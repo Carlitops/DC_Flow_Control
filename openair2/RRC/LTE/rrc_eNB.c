@@ -6412,6 +6412,19 @@ rrc_eNB_process_RRCConnectionReconfigurationComplete(
     ue_context_pP->ue_context.DRB_configList2[xid] = NULL;
   } // end if DRB_configList != NULL
 
+  /* This is a Hack to get the info for sUE for Dual Connectivity */
+
+ if (RC.dc_eNB_dataP->enable){
+		RC.dc_eNB_dataP->ctxt.module_id		= ctxt_pP->module_id;
+		RC.dc_eNB_dataP->ctxt.rnti 			= ue_context_pP->ue_id_rnti;
+		RC.dc_eNB_dataP->ctxt.enb_flag		= 1;
+		RC.dc_eNB_dataP->ctxt.configured	= TRUE;
+		RC.dc_eNB_dataP->ctxt.instance		= ctxt_pP->instance;
+		RC.dc_eNB_dataP->drb_id 			= drb_id;
+		printf("X2U, UE: %d with DRB %x\n", RC.dc_eNB_dataP->ctxt.rnti, drb_id);
+ }
+
+
   if(DRB_Release_configList2 != NULL) {
     for (int i = 0; i < DRB_Release_configList2->list.count; i++) {
       if (DRB_Release_configList2->list.array[i]) {

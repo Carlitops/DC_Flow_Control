@@ -37,8 +37,12 @@
 #include "SIMULATION/TOOLS/sim.h"
 #include "common/utils/LOG/vcd_signal_dumper.h"
 #include "PHY/LTE_UE_TRANSPORT/transport_proto_ue.h"
+#include "openair2/LAYER2/PDCP_v10.1.0/pdcp_reordering.h"
+#include "common/ran_context.h"
 //#define DEBUG_DLSCH_DECODING
 //#define UE_DEBUG_TRACE 1
+
+extern RAN_CONTEXT_t RC;
 
 void free_ue_dlsch(LTE_UE_DLSCH_t *dlsch) {
   int i,r;

@@ -371,6 +371,7 @@ rx_sdu(const module_id_t enb_mod_idP,
           if (UE_template_ptr->phr_info > 40) {
             UE_template_ptr->phr_info = 40;
           }
+          UE_template_ptr->phr_info = 40;
 
           LOG_D(MAC, "[eNB %d] CC_id %d MAC CE_LCID %d : Received PHR PH = %d (db)\n",
                 enb_mod_idP,

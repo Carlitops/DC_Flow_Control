@@ -45,6 +45,8 @@
 #include "assertions.h"
 #include "conversions.h"
 
+#include "x2u_procedures.h"
+
 int x2ap_eNB_generate_x2_setup_request(
   x2ap_eNB_instance_t *instance_p, x2ap_eNB_data_t *x2ap_eNB_data_p)
 {
@@ -490,6 +492,9 @@ int x2ap_eNB_generate_x2_setup_response(x2ap_eNB_instance_t *instance_p, x2ap_eN
   MSC_LOG_TX_MESSAGE (MSC_X2AP_SRC_ENB, MSC_X2AP_TARGET_ENB, NULL, 0, "0 X2Setup/successfulOutcome assoc_id %u", x2ap_eNB_data_p->assoc_id);
 
   x2ap_eNB_itti_send_sctp_data_req(instance_p->instance, x2ap_eNB_data_p->assoc_id, buffer, len, 0);
+
+  //Dual Connectivity
+  x2u_init_for_dc(instance_p->enb_x2_ip_address.ipv4_address);
 
   return ret;
 }

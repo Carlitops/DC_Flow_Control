@@ -19,28 +19,40 @@
  *      contact@openairinterface.org
  */
 
-// These messages files are mandatory and must always be placed in first position
-#include "intertask_messages_def.h"
-#include "timer_messages_def.h"
+/*
+  AUTHOR  : Carlos Pupiales
+  COMPANY : Universitat Politecnica de Catalunya
+  EMAIL   : carlos.pupiales@upc.edu
+*/
 
-// Messages files used between tasks
-#include "phy_messages_def.h"
-#include "mac_messages_def.h"
-#include "rlc_messages_def.h"
-#include "pdcp_messages_def.h"
-#include "rrc_messages_def.h"
-#include "nas_messages_def.h"
-#if ENABLE_RAL
-#include "ral_messages_def.h"
-#endif
-#include "s1ap_messages_def.h"
-#include "f1ap_messages_def.h"
-#include "x2ap_messages_def.h"
-#include "m2ap_messages_def.h"
-#include "m3ap_messages_def.h"
-#include "sctp_messages_def.h"
-#include "udp_messages_def.h"
-#include "gtpv1_u_messages_def.h"
-#include "flexran_messages_def.h"
-#include "x2u_messages_def.h"
-#include "ue_dc_messages_def.h"
+#include "platform_types.h"
+#include "UTIL/MEM/mem_block.h"
+
+#ifndef X2U_PROCEDURES_H_
+#define X2U_PROCEDURES_H_
+
+#define MeNB	1
+#define	SeNB	2
+
+
+// Define structures for DC
+
+typedef struct dc_eNB_data_s{
+	protocol_ctxt_t	ctxt;  // Protocol context
+	rb_id_t			drb_id; // Data Radio Bearer assigned to UE
+	boolean_t		enable;
+	uint32_t		x2u_port;
+	int				eNB_type; //MeNB or SeNB
+	int 			flow_control_type;
+	char			remote_eNB_address[16];
+	char			local_eNB_address[16]; //Should be similar to X2C
+} dc_eNB_data_t;
+
+
+void *x2u_eNB_task(void *arg);
+
+int is_DC_enabled(void);
+
+void x2u_init_for_dc(char local_ip_address[16]);
+
+#endif /* OPENAIR2_X2U_X2U_PROCEDURES_H_ */

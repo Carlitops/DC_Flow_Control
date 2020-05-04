@@ -983,6 +983,39 @@ typedef struct srb1_params_s {
 #define ENB_M2_IP_ADDRESS_PREFERENCE_IDX 2
 /*---------------------------------------------------------------------------------------------------------------------------------------*/
 
+
+/*-----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+/* Dual_Connectivity configuration parameters for eNB */
+#define ENB_CONFIG_STRING_DC_CONFIG    	 			  "DUAL_CONNECTIVITY"
+
+/* Dual_Connectivity configuration parameters names   */
+
+#define ENB_CONFIG_STRING_DC_ENABLED            	 	  "DC_ENABLED"
+#define ENB_CONFIG_STRING_DC_ENB_TYPE                     "DC_ENB_TYPE"
+#define ENB_CONFIG_STRING_DC_PORT_FOR_X2U	          	  "PORT_FOR_X2U"
+#define ENB_CONFIG_STRING_DC_FLOW_CONTROL_TYPE         	  "FLOW_CONTROL_TYPE"
+#define ENB_CONFIG_STRING_DC_REMOTE_ENB_ADDRESS       	  "DC_REMOTE_ENB_ADDRESS"
+
+/*-------------------------------------------------------------------------------------------------------------------------------------*/
+/*                                            Dual Connectivity configuration parameters for eNB                                       */
+/*   optname                                          helpstr   paramflags    XXXptr       defXXXval         type           numelt     */
+/*-------------------------------------------------------------------------------------------------------------------------------------*/
+#define DCPARAMS_DESC {  \
+{ENB_CONFIG_STRING_DC_ENABLED,                   NULL,      0,         strptr:NULL,   	defstrval:"no",   	TYPE_STRING,   0},          \
+{ENB_CONFIG_STRING_DC_ENB_TYPE,	                 NULL,      0,         strptr:NULL,   	defstrval:"menb",   TYPE_STRING,   0},          \
+{ENB_CONFIG_STRING_DC_PORT_FOR_X2U, 	 		 NULL,      0,         uptr:NULL,   	defintval:2153,  	TYPE_UINT,   0},          \
+{ENB_CONFIG_STRING_DC_FLOW_CONTROL_TYPE, 	 	 NULL,      0,         uptr:NULL,   	defintval:1,	  	TYPE_UINT,   0},          \
+{ENB_CONFIG_STRING_DC_REMOTE_ENB_ADDRESS,        NULL,      0,         strptr:NULL,   	defstrval:NULL,   	TYPE_STRING,   0},          \
+}
+
+#define DC_ENABLED_IDX                     0
+#define DC_ENB_TYPE_IDX      			   1
+#define DC_PORT_FOR_X2U_IDX    		       2
+#define DC_FLOW_CONTROL_TYPE_IDX		   3
+#define DC_REMOTE_ENB_ADDRESS_IDX          4
+
+/*---------------------------------------------------------------------------------------------------------------------------------------*/
+
 /*---------------------------------------------------------------------------------------------------------------------------------------*/
 /* SCTP configuration parameters section name */
 #define ENB_CONFIG_STRING_SCTP_CONFIG                    "SCTP"

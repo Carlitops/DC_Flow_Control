@@ -19,28 +19,28 @@
  *      contact@openairinterface.org
  */
 
-// These messages files are mandatory and must always be placed in first position
-#include "intertask_messages_def.h"
-#include "timer_messages_def.h"
+/*
+  AUTHOR  : Carlos Pupiales
+  COMPANY : Universitat Politecnica de Catalunya
+  EMAIL   : carlos.pupiales@upc.edu
+*/
 
-// Messages files used between tasks
-#include "phy_messages_def.h"
-#include "mac_messages_def.h"
-#include "rlc_messages_def.h"
-#include "pdcp_messages_def.h"
-#include "rrc_messages_def.h"
-#include "nas_messages_def.h"
-#if ENABLE_RAL
-#include "ral_messages_def.h"
-#endif
-#include "s1ap_messages_def.h"
-#include "f1ap_messages_def.h"
-#include "x2ap_messages_def.h"
-#include "m2ap_messages_def.h"
-#include "m3ap_messages_def.h"
-#include "sctp_messages_def.h"
-#include "udp_messages_def.h"
-#include "gtpv1_u_messages_def.h"
-#include "flexran_messages_def.h"
-#include "x2u_messages_def.h"
-#include "ue_dc_messages_def.h"
+
+
+#ifndef X2U_MESSAGES_TYPES_H_
+#define X2U_MESSAGES_TYPES_H_
+
+#include "x2u_procedures.h"
+
+#define X2U_DC_INIT(mSGpTR)                   (mSGpTR)->ittiMsg.x2u_dc_init
+#define X2U_DC_DATA_REQ(mSGpTR)               (mSGpTR)->ittiMsg.x2u_dc_data_req
+
+
+
+typedef struct x2u_dc_data_req_s {
+	rb_id_t 		rb_id_dc;
+	uint16_t 		pdu_size_dc;
+	unsigned char 	*pdu_buffer_dcP;
+}x2u_dc_data_req_t;
+
+#endif /* OPENAIR2_COMMON_X2U_MESSAGES_TYPES_H_ */

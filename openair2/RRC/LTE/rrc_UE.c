@@ -90,6 +90,8 @@
 
 #include "LTE_SL-Preconfiguration-r12.h"
 
+#include "ue_dc.h"
+
 //for D2D
 int ctrl_sock_fd;
 #define BUFSIZE 1024
@@ -1392,6 +1394,9 @@ rrc_ue_process_radioResourceConfigDedicated(
 
   UE_rrc_inst[ctxt_pP->module_id].Info[eNB_index].State = RRC_CONNECTED;
   LOG_I(RRC,"[UE %d] State = RRC_CONNECTED (eNB %d)\n",ctxt_pP->module_id,eNB_index);
+
+  //TODO: Hack for Dual Connectivity
+  rrc_dc_get_ctxt(ctxt_pP);
 }
 
 

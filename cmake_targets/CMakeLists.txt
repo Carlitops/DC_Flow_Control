@@ -898,6 +898,8 @@ include_directories("${OPENAIR3_DIR}/SECU")
 include_directories("${OPENAIR3_DIR}/SCTP")
 include_directories("${OPENAIR3_DIR}/S1AP")
 include_directories("${OPENAIR2_DIR}/X2AP")
+include_directories("${OPENAIR2_DIR}/X2U")
+include_directories("${OPENAIR2_DIR}/UE_DC")
 include_directories("${OPENAIR2_DIR}/M2AP")
 include_directories("${OPENAIR2_DIR}/F1AP")
 include_directories("${OPENAIR3_DIR}/UDP")
@@ -1691,6 +1693,7 @@ set(L2_SRC
   ${PDCP_DIR}/pdcp_util.c
   ${PDCP_DIR}/pdcp_security.c
   ${PDCP_DIR}/pdcp_netlink.c
+  ${PDCP_DIR}/pdcp_reordering.c
 #  ${RRC_DIR}/rrc_UE.c
   ${RRC_DIR}/rrc_eNB.c
   ${RRC_DIR}/rrc_eNB_endc.c
@@ -1727,6 +1730,7 @@ set(L2_SRC_UE
   ${PDCP_DIR}/pdcp_util.c
   ${PDCP_DIR}/pdcp_security.c
   ${PDCP_DIR}/pdcp_netlink.c
+  ${PDCP_DIR}/pdcp_reordering.c
   ${RRC_DIR}/rrc_UE.c
   ${RRC_DIR}/rrc_common.c
   ${RRC_DIR}/L2_interface_common.c
@@ -1741,6 +1745,7 @@ set(LTE_NR_L2_SRC_UE
   ${PDCP_DIR}/pdcp_util.c
   ${PDCP_DIR}/pdcp_security.c
   ${PDCP_DIR}/pdcp_netlink.c
+  ${PDCP_DIR}/pdcp_reordering.c
   ${LTE_RLC_SRC}
   )
 
@@ -1863,6 +1868,13 @@ target_compile_definitions(L2_UE PUBLIC -DPDCP_USE_NETLINK)
 endif()
 
 add_dependencies(L2_UE rrc_flag s1ap_flag x2_flag)
+
+add_library(X2U_LIB 
+	${OPENAIR2_DIR}/X2U/x2u_procedures.c)
+
+add_library(UE_DC_LIB 
+	${OPENAIR2_DIR}/UE_DC/ue_dc.c
+	${OPENAIR2_DIR}/UE_DC/udp_ue.c)
 
 add_library( NR_L2_UE ${NR_L2_SRC_UE} ${MAC_NR_SRC_UE} )
 
@@ -2224,11 +2236,14 @@ add_library(LFDS7
   ${lfds7_queue} ${lfds7_ring} ${lfds7_qbss} ${lfds7_stack} ${lfds7_freelist} ${lfds7_btree} ${lfds7_hash} ${lfds7_ordered_list} ${lfds7_unordered_list} ${lfds7_misc}
 )
 
+add_library(SIMU_COMMON
+  ${OPENAIR1_DIR}/SIMULATION/TOOLS/random_channel.c
+  ${OPENAIR1_DIR}/SIMULATION/TOOLS/rangen_double.c
+  )
+  
 # Simulation library
 ##########################
 set (SIMUSRC 
-${OPENAIR1_DIR}/SIMULATION/TOOLS/random_channel.c
-${OPENAIR1_DIR}/SIMULATION/TOOLS/rangen_double.c
 ${OPENAIR1_DIR}/SIMULATION/TOOLS/taus.c
 ${OPENAIR1_DIR}/SIMULATION/TOOLS/multipath_channel.c
 ${OPENAIR1_DIR}/SIMULATION/TOOLS/multipath_tv_channel.c
@@ -2237,7 +2252,6 @@ ${OPENAIR1_DIR}/SIMULATION/TOOLS/channel_sim.c
 ${OPENAIR1_DIR}/SIMULATION/RF/rf.c
 ${OPENAIR1_DIR}/SIMULATION/RF/dac.c
 ${OPENAIR1_DIR}/SIMULATION/RF/adc.c
-${OPENAIR_DIR}/targets/ARCH/rfsimulator/apply_channelmod.c
 #${OPENAIR1_DIR}/SIMULATION/ETH_TRANSPORT/netlink_init.c
 )
 
@@ -2402,8 +2416,10 @@ target_link_libraries(gnbscope ${XFORMS_LIBRARIES})
 
 add_library(rfsimulator MODULE 
 	${OPENAIR_TARGETS}/ARCH/rfsimulator/simulator.c
+ 	${OPENAIR_TARGETS}/ARCH/rfsimulator/apply_channelmod.c
+  	${OPENAIR_TARGETS}/ARCH/rfsimulator/new_channel_sim.c
 	)
-target_link_libraries(rfsimulator SIMU ${ATLAS_LIBRARIES})
+target_link_libraries(rfsimulator SIMU_COMMON ${ATLAS_LIBRARIES})
 
 add_library(oai_iqplayer MODULE 
 	${OPENAIR_TARGETS}/ARCH/iqplayer/iqplayer_lib.c
@@ -2507,7 +2523,7 @@ add_dependencies(lte-softmodem rrc_flag s1ap_flag x2_flag oai_iqplayer)
 target_link_libraries (lte-softmodem
   -Wl,--start-group
   RRC_LIB NR_RRC_LIB S1AP_LIB S1AP_ENB F1AP_LIB F1AP M2AP_LIB M2AP_ENB X2AP_LIB X2AP_ENB M3AP_LIB M3AP_ENB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT MME_APP UDP SCHED_LIB SCHED_RU_LIB 
-  PHY_COMMON PHY PHY_RU LFDS L2 L2_LTE NFAPI_COMMON_LIB NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB LFDS7
+  PHY_COMMON PHY PHY_RU LFDS L2 L2_LTE NFAPI_COMMON_LIB NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB X2U_LIB LFDS7
   ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} ${FLEXRAN_AGENT_LIB} ${FSPT_MSG_LIB} ${PROTO_AGENT_LIB}
   -Wl,--end-group z dl)
   
@@ -2579,9 +2595,9 @@ if (NOT ${NOS1})
 endif()
 target_link_libraries (lte-uesoftmodem
   -Wl,--start-group
-  RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB M2AP_LIB M2AP_ENB M3AP_LIB M3AP_ENB F1AP F1AP_LIB
+  RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB M2AP_LIB M2AP_ENB M3AP_LIB M3AP_ENB F1AP F1AP_LIB UE_DC_LIB
   GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT MME_APP UDP SCHED_RU_LIB SCHED_UE_LIB PHY_COMMON
-  PHY_UE PHY_RU LFDS L2_UE L2_LTE LFDS7 SIMU NFAPI_COMMON_LIB NFAPI_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
+  PHY_UE PHY_RU LFDS L2_UE L2_LTE LFDS7 SIMU_COMMON SIMU NFAPI_COMMON_LIB NFAPI_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
   ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} ${ATLAS_LIBRARIES}
   -Wl,--end-group z dl)
 
@@ -2622,7 +2638,7 @@ target_link_libraries (nr-softmodem
   -Wl,--start-group
   UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU LFDS GTPV1U SECU_CN SECU_OSA
   ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} ${FLEXRAN_AGENT_LIB} LFDS7 ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} RRC_LIB NR_RRC_LIB 
-  S1AP_LIB S1AP_ENB L2 L2_NR MAC_NR_COMMON NFAPI_COMMON_LIB NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
+  S1AP_LIB S1AP_ENB L2 L2_NR MAC_NR_COMMON NFAPI_COMMON_LIB NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB X2U_LIB
   X2AP_LIB X2AP_ENB F1AP_LIB F1AP M2AP_LIB M2AP_ENB M3AP_LIB M3AP_ENB ${PROTO_AGENT_LIB} ${FSPT_MSG_LIB}
   -Wl,--end-group z dl)
 
@@ -2663,7 +2679,7 @@ add_executable(nr-uesoftmodem
 
 target_link_libraries (nr-uesoftmodem
   -Wl,--start-group
-  RRC_LIB NR_RRC_LIB SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_RU_LIB SCHED_UE_LIB SCHED_NR_UE_LIB
+  RRC_LIB NR_RRC_LIB SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_RU_LIB SCHED_UE_LIB SCHED_NR_UE_LIB UE_DC_LIB
   ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} LFDS7 ${ATLAS_LIBRARIES} 
   PHY_COMMON PHY_NR_COMMON PHY_UE PHY_NR_UE PHY_RU LFDS L2_UE NR_L2_UE MAC_NR_COMMON S1AP_LIB S1AP_ENB
   NFAPI_COMMON_LIB NFAPI_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
@@ -2715,7 +2731,7 @@ add_executable(dlsim_tm4
   ${T_SOURCE}
   )
 target_link_libraries (dlsim_tm4
-  -Wl,--start-group SIMU UTIL SCHED_LIB SCHED_RU_LIB PHY LFDS ${ITTI_LIB} -Wl,--end-group
+  -Wl,--start-group SIMU SIMU_COMMON UTIL SCHED_LIB SCHED_RU_LIB PHY LFDS ${ITTI_LIB} -Wl,--end-group
   pthread m rt ${CONFIG_LIB} ${ATLAS_LIBRARIES} ${T_LIB}
   )
 
@@ -2728,7 +2744,7 @@ add_executable(polartest
   ${SHLIB_LOADER_SOURCES}
   )
 target_link_libraries(polartest
-  -Wl,--start-group UTIL SIMU PHY_COMMON PHY_NR PHY_NR_COMMON PHY_NR_UE CONFIG_LIB -Wl,--end-group
+  -Wl,--start-group UTIL SIMU SIMU_COMMON PHY_COMMON PHY_NR PHY_NR_COMMON PHY_NR_UE CONFIG_LIB -Wl,--end-group
   m pthread ${ATLAS_LIBRARIES} dl
   )
 
@@ -2743,7 +2759,7 @@ add_executable(smallblocktest
 
 
 target_link_libraries(smallblocktest
-  -Wl,--start-group UTIL SIMU PHY_NR PHY_COMMON PHY_NR_COMMON CONFIG_LIB -Wl,--end-group
+  -Wl,--start-group UTIL SIMU SIMU_COMMON PHY_NR PHY_COMMON PHY_NR_COMMON CONFIG_LIB -Wl,--end-group
   m pthread ${ATLAS_LIBRARIES} dl
   )
 
@@ -2756,7 +2772,7 @@ add_executable(ldpctest
 add_dependencies( ldpctest ldpc_orig ldpc_optim ldpc_optim8seg ldpc ) 
 
 target_link_libraries(ldpctest
-  -Wl,--start-group UTIL SIMU PHY_NR PHY_COMMON PHY_NR_COMMON CONFIG_LIB -Wl,--end-group
+  -Wl,--start-group UTIL SIMU SIMU_COMMON PHY_NR PHY_COMMON PHY_NR_COMMON CONFIG_LIB -Wl,--end-group
   m pthread ${ATLAS_LIBRARIES} dl
   )
 
@@ -2865,7 +2881,7 @@ foreach(myExe dlsim dlsim_tm7 ulsim pbchsim scansim mbmssim pdcchsim pucchsim pr
     ${NFAPI_USER_DIR}/nfapi.c
     )
   target_link_libraries (${myExe}
-    -Wl,--start-group SIMU UTIL SCHED_LIB SCHED_RU_LIB SCHED_UE_LIB PHY_COMMON PHY_NR_COMMON PHY PHY_UE PHY_RU LFDS ${ITTI_LIB} LFDS7 -Wl,--end-group
+    -Wl,--start-group SIMU SIMU_COMMON UTIL SCHED_LIB SCHED_RU_LIB SCHED_UE_LIB PHY_COMMON PHY_NR_COMMON PHY PHY_UE PHY_RU LFDS ${ITTI_LIB} LFDS7 -Wl,--end-group
     pthread m rt ${CONFIG_LIB} ${ATLAS_LIBRARIES}  ${XFORMS_LIBRARIES} ${T_LIB} dl
     )
    
@@ -2945,7 +2961,7 @@ if (${T_TRACER})
         NFAPI_COMMON_LIB NFAPI_LIB NFAPI_PNF_LIB NFAPI_VNF_LIB NFAPI_USER_LIB
         PHY_COMMON PHY PHY_UE PHY_NR PHY_NR_COMMON PHY_NR_UE PHY_RU PHY_MEX
         L2 L2_LTE L2_NR L2_UE NR_L2_UE MAC_NR_COMMON MAC_NR MAC_UE_NR
-        CN_UTILS GTPV1U SCTP_CLIENT MME_APP UDP LIB_NAS_UE NB_IoT LFDS LFDS7 SIMU SIMU_ETH OPENAIR0_LIB
+        CN_UTILS GTPV1U SCTP_CLIENT MME_APP UDP LIB_NAS_UE NB_IoT LFDS LFDS7 SIMU SIMU_COMMON SIMU_ETH OPENAIR0_LIB
         ldpc_orig ldpc_optim ldpc_optim8seg ldpc)
     if (TARGET ${i})
       add_dependencies(${i} generate_T)

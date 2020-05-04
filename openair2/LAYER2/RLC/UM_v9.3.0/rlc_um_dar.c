@@ -773,6 +773,7 @@ void rlc_um_check_timer_dar_time_out(
             rlc_pP->vr_ur);
 #endif
 
+      printf("t-Reordering for RLC_UM  has expired\n");
       if (pthread_mutex_trylock(&rlc_pP->lock_dar_buffer) == 0) {
         old_vr_ur   = rlc_pP->vr_ur;
 
@@ -780,6 +781,7 @@ void rlc_um_check_timer_dar_time_out(
 
         while (rlc_um_get_pdu_from_dar_buffer(ctxt_pP, rlc_pP, rlc_pP->vr_ur)) {
           rlc_pP->vr_ur = (rlc_pP->vr_ur+1)%rlc_pP->rx_sn_modulo;
+          printf("Getting RLC SDU for Reassembly %d\n",rlc_pP->vr_ur);
         }
 
 #if TRACE_RLC_UM_DAR

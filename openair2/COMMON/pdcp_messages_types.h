@@ -34,6 +34,7 @@
 #define RRC_DCCH_DATA_REQ(mSGpTR)               (mSGpTR)->ittiMsg.rrc_dcch_data_req
 #define RRC_DCCH_DATA_IND(mSGpTR)               (mSGpTR)->ittiMsg.rrc_dcch_data_ind
 #define RRC_PCCH_DATA_REQ(mSGpTR)               (mSGpTR)->ittiMsg.rrc_pcch_data_req
+#define REORDERING_DATA_REQ(mSGpTR)             (mSGpTR)->ittiMsg.reordering_data_req
 
 //-------------------------------------------------------------------------------------------//
 // Messages between RRC and PDCP layers
@@ -69,5 +70,11 @@ typedef struct RrcPcchDataReq_s {
   uint8_t      ue_index;
   uint8_t      CC_id;
 } RrcPcchDataReq;
+
+typedef struct ReorderingDataReq_s {
+	int				rlc_source;
+	uint16_t 		pdu_size;
+	unsigned char 	*pdu_data;
+}ReorderingDataReq;
 
 #endif /* PDCP_MESSAGES_TYPES_H_ */

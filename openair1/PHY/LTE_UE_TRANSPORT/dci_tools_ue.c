@@ -53,6 +53,11 @@
 #include "../LTE_TRANSPORT/transport_common_proto.h"
 #include "SCHED/sched_common.h"
 
+//Used to change manually the cqi that UE reports to eNB
+#include "common/ran_context.h"
+#include "pdcp_reordering.h"
+extern RAN_CONTEXT_t RC;
+
 /*
 #undef LOG_D
 #define LOG_D(A,B...) printf(B)
@@ -2921,7 +2926,9 @@ uint8_t sinr2cqi(double sinr,uint8_t trans_mode)
 
   if(flag_LA==0) {
     // Ideal Channel Estimation
-    if (sinr<=-4.89)
+	if (RC.dc_ue_dataP->cqi_vector.cqi_hack_enabled == TRUE){
+		retValue = hacked_cqi();
+	} else if (sinr<=-4.89)
       retValue = (0);
     else if (sinr < -3.53)
       retValue = (3);
@@ -3271,10 +3278,6 @@ void reset_cba_uci(void *o)
   ((HLC_subband_cqi_mcs_CBA_5MHz *)o)->mcs     = 0; //fixme
   ((HLC_subband_cqi_mcs_CBA_5MHz *)o)->crnti  = 0x0;
 }
-
-
-
-
 
 int generate_ue_ulsch_params_from_dci(void *dci_pdu,
                                       uint16_t rnti,
