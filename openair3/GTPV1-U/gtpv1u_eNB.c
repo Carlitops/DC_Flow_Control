@@ -51,6 +51,8 @@
 #include "gtpv1u_eNB_defs.h"
 #include "gtpv1u_eNB_task.h"
 
+#include "platform_types.h"
+
 #undef GTP_DUMP_SOCKET
 
 extern unsigned char NB_eNB_INST;
@@ -564,7 +566,7 @@ gtpv1u_create_s1u_tunnel(
   teid_t                   s1u_teid             = 0;
   gtpv1u_teid_data_t      *gtpv1u_teid_data_p   = NULL;
   gtpv1u_ue_data_t        *gtpv1u_ue_data_p     = NULL;
-  //MessageDef              *message_p            = NULL;
+  MessageDef              *message_p            = NULL;
   hashtable_rc_t           hash_rc              = HASH_TABLE_KEY_NOT_EXISTS;
   int                      i;
   ebi_t                    eps_bearer_id        = 0;
@@ -671,6 +673,24 @@ gtpv1u_create_s1u_tunnel(
       create_tunnel_resp_pP->status         = 0xFF;
     }
   }
+
+  //Retrieve context for Dual Connectivity
+
+  message_p = itti_alloc_new_message(TASK_GTPV1_U, GTPV1U_ENB_GET_CTXT);
+  if (message_p == NULL) {
+   	LOG_E(GTPU,"Error to allocate the message GTPV1U_ENB_GET_CTXT in queue\n");
+   	return -1;
+  } else {
+	  GTPV1U_ENB_GET_CTXT(message_p).enb_id_for_DC		   =	gtpv1u_teid_data_p->enb_id;
+	  GTPV1U_ENB_GET_CTXT(message_p).ue_id_for_DC 		   = 	gtpv1u_teid_data_p->ue_id;
+      GTPV1U_ENB_GET_CTXT(message_p).eps_bearer_id_for_DC  = 	gtpv1u_teid_data_p->eps_bearer_id;
+      if(itti_send_msg_to_task(TASK_X2U, INSTANCE_DEFAULT, message_p) == 0){
+    	LOG_D(GTPU,"CTXT sent to X2U\n");
+      }else{
+    	LOG_D(GTPU,"Error retrieving UE context in eNB for DC\n");
+      }
+    }
+  ///
 
   MSC_LOG_TX_MESSAGE(
     MSC_GTPU_ENB,

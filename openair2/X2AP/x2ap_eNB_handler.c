@@ -45,6 +45,9 @@
 #include "assertions.h"
 #include "conversions.h"
 
+#include "x2u_enb.h"
+#include "enb_config.h"
+
 static
 int x2ap_eNB_handle_x2_setup_request (instance_t instance,
                                       uint32_t assoc_id,
@@ -420,6 +423,8 @@ int x2ap_eNB_handle_x2_setup_response(instance_t instance,
   x2ap_eNB_data_t                     *x2ap_eNB_data;
   uint32_t                            eNB_id = 0;
 
+  MessageDef						  *message_p=NULL;
+
   DevAssert (pdu != NULL);
   x2SetupResponse = &pdu->choice.successfulOutcome.value.choice.X2SetupResponse;
 
@@ -519,7 +524,22 @@ int x2ap_eNB_handle_x2_setup_response(instance_t instance,
   DevAssert(instance_p != NULL);
 
   instance_p->x2_target_enb_associated_nb ++;
+
+  /*Analyze if dual connectivity is enabled
+   * if true, send configuration parameters to x2u task*/
+  if (is_dc_enabled ()){
+	  message_p = itti_alloc_new_message(TASK_X2AP, DC_ENB_INIT);
+	  if (message_p == NULL) {
+	   	 X2AP_ERROR("It's not possible to allocate a message to TASK_X2U\n");
+	     return -1;
+	  }
+	RCconfig_DC(message_p); /*get the configuration parameters for dual connectivity*/
+	itti_send_msg_to_task(TASK_X2U, INSTANCE_DEFAULT, message_p);
+  }
+    /*Procedure to initialize dual connectivity ends*/
+
   x2ap_handle_x2_setup_message(instance_p, x2ap_eNB_data, 0);
+
 
   return 0;
 }

@@ -505,7 +505,70 @@ ID = LEGACY_UDP__TRACE
     DESC = UDP_ legacy logs - trace level
     GROUP = ALL:LEGACY_UDP_:LEGACY_GROUP_TRACE:LEGACY
     FORMAT = string,log
-
+    
+ID = LEGACY_UDP_UE_DC_INFO
+    DESC = UDP_UE_DC legacy logs - info level
+    GROUP = ALL:LEGACY_UDP_UE_DC:LEGACY_GROUP_INFO:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UDP_UE_DC_ERROR
+    DESC = UDP_UE_DC legacy logs - error level
+    GROUP = ALL:LEGACY_UDP_UE_DC:LEGACY_GROUP_ERROR:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UDP_UE_DC_WARNING
+    DESC = UDP_UE_DC legacy logs - warning level
+    GROUP = ALL:LEGACY_UDP_UE_DC:LEGACY_GROUP_WARNING:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UDP_UE_DC_DEBUG
+    DESC = UDP_UE_DC legacy logs - debug level
+    GROUP = ALL:LEGACY_UDP_UE_DC:LEGACY_GROUP_DEBUG:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UDP_UE_DC_TRACE
+    DESC = UDP_UE_DC legacy logs - trace level
+    GROUP = ALL:LEGACY_UDP_UE_DC:LEGACY_GROUP_TRACE:LEGACY
+    FORMAT = string,log
+        
+ID = LEGACY_UE_DC_INFO
+    DESC = UE_DC legacy logs - info level
+    GROUP = ALL:LEGACY_UE_DC:LEGACY_GROUP_INFO:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UE_DC_ERROR
+    DESC = UE_DC legacy logs - error level
+    GROUP = ALL:LEGACY_UE_DC:LEGACY_GROUP_ERROR:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UE_DC_WARNING
+    DESC = UE_DC legacy logs - warning level
+    GROUP = ALL:LEGACY_UE_DC:LEGACY_GROUP_WARNING:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UE_DC_DEBUG
+    DESC = UE_DC legacy logs - debug level
+    GROUP = ALL:LEGACY_UE_DC:LEGACY_GROUP_DEBUG:LEGACY
+    FORMAT = string,log
+ID = LEGACY_UE_DC_TRACE
+    DESC = UE_DC legacy logs - trace level
+    GROUP = ALL:LEGACY_UE_DC:LEGACY_GROUP_TRACE:LEGACY
+    FORMAT = string,log
+        
+ID = LEGACY_X2U_INFO
+    DESC = X2U legacy logs - info level
+    GROUP = ALL:LEGACY_X2U:LEGACY_GROUP_INFO:LEGACY
+    FORMAT = string,log
+ID = LEGACY_X2U_ERROR
+    DESC = X2U legacy logs - error level
+    GROUP = ALL:LEGACY_X2U:LEGACY_GROUP_ERROR:LEGACY
+    FORMAT = string,log
+ID = LEGACY_X2U_WARNING
+    DESC = X2U legacy logs - warning level
+    GROUP = ALL:LEGACY_X2U:LEGACY_GROUP_WARNING:LEGACY
+    FORMAT = string,log
+ID = LEGACY_X2U_DEBUG
+    DESC = X2U legacy logs - debug level
+    GROUP = ALL:LEGACY_X2U:LEGACY_GROUP_DEBUG:LEGACY
+    FORMAT = string,log
+ID = LEGACY_X2U_TRACE
+    DESC = X2U legacy logs - trace level
+    GROUP = ALL:LEGACY_X2U:LEGACY_GROUP_TRACE:LEGACY
+    FORMAT = string,log
+    
 ID = LEGACY_NAS_INFO
     DESC = NAS legacy logs - info level
     GROUP = ALL:LEGACY_NAS:LEGACY_GROUP_INFO:LEGACY
@@ -943,7 +1006,7 @@ ID = LEGACY_F1AP_ERROR
     DESC = F1AP ERROR LEVEL
     GROUP = ALL:LEGACY_F1AP:LEGACY_GROUP_ERROR:LEGACY
     FORMAT = string,log
-
+    
 #################
 #### UE LOGS ####
 #################

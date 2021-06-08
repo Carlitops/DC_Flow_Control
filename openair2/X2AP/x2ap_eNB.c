@@ -47,6 +47,9 @@
 #include "assertions.h"
 #include "conversions.h"
 
+#include "rlc.h"
+#include "platform_types.h"
+
 struct x2ap_enb_map;
 struct x2ap_eNB_data_s;
 
@@ -474,7 +477,7 @@ void x2ap_eNB_ue_context_release(instance_t instance,
 
 void *x2ap_task(void *arg) {
   MessageDef *received_msg = NULL;
-  int         result;
+ int         result;
   X2AP_DEBUG("Starting X2AP layer\n");
   x2ap_eNB_prepare_internal_data();
   itti_mark_task_ready(TASK_X2AP);
@@ -581,3 +584,7 @@ mutex_error:
   LOG_E(X2AP, "mutex error\n");
   exit(1);
 }
+
+
+
+

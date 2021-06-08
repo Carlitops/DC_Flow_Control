@@ -29,6 +29,7 @@
   #include "openair3/NAS/UE/nas_ue_task.h"
   #include "udp_eNB_task.h"
   #include "gtpv1u_eNB_task.h"
+  #include "ue_dc.h"
   #if ENABLE_RAL
     #include "lteRALue.h"
     #include "lteRALenb.h"
@@ -60,12 +61,28 @@ int create_tasks_ue(uint32_t ue_nb) {
 #      endif
   } /* EPC_MODE_ENABLED */
 
-  if (ue_nb > 0) {
+    if (ue_nb > 0) {
     if (itti_create_task (TASK_RRC_UE, rrc_ue_task, NULL) < 0) {
       LOG_E(RRC, "Create task for RRC UE failed\n");
       return -1;
     }
   }
+
+    if (ue_nb > 0) {
+    	if(is_ue_dc_enabled()){
+    		if (itti_create_task (TASK_UDP_UE_DC, udp_ue_dc_task, NULL) < 0) {
+               LOG_E(UDP_UE_DC, "Create task for UDP_UE_DC failed\n");
+               return -1;
+             }
+
+    		if (itti_create_task (TASK_UE_DC, ue_dc_task, NULL) < 0) {
+    		   LOG_E(UE_DC, "Create task for UE_DC failed\n");
+    		   return -1;
+    		}
+    	}else {
+           	printf("Dual Connectivity is not enabled\n");
+        }
+    }
 
   itti_wait_ready(0);
   return 0;

@@ -77,7 +77,6 @@
 
 #include "intertask_interface.h"
 
-
 #include "SIMULATION/TOOLS/sim.h" // for taus
 
 #include "openair2/LAYER2/MAC/mac_extern.h"
@@ -615,6 +614,7 @@ static void rrc_ue_generate_RRCConnectionSetupComplete( const protocol_ctxt_t *c
 
 //-----------------------------------------------------------------------------
 void rrc_ue_generate_RRCConnectionReconfigurationComplete( const protocol_ctxt_t *const ctxt_pP, const uint8_t eNB_index, const uint8_t Transaction_id ) {
+  MessageDef	*message_p = NULL;
   uint8_t buffer[32], size;
   size = do_RRCConnectionReconfigurationComplete(ctxt_pP, buffer, Transaction_id);
   LOG_I(RRC,PROTOCOL_RRC_CTXT_UE_FMT" Logical Channel UL-DCCH (SRB1), Generating RRCConnectionReconfigurationComplete (bytes %d, eNB_index %d)\n",
@@ -636,7 +636,30 @@ void rrc_ue_generate_RRCConnectionReconfigurationComplete( const protocol_ctxt_t
     size,
     buffer,
     PDCP_TRANSMISSION_MODE_CONTROL);
-}
+
+  //---------------------------------
+  //send ctxt to ue_dc_task
+    message_p = itti_alloc_new_message(TASK_RRC_UE, CTXT_UE_DC);
+    if (message_p == NULL) {
+     	LOG_E(RRC,"Error to allocate the message CTXT_UE_DC in queue\n");
+    } else {
+    	CTXT_UE_DC(message_p).module_id = ctxt_pP->module_id;
+    	CTXT_UE_DC(message_p).enb_flag = ctxt_pP->enb_flag;
+    	CTXT_UE_DC(message_p).instance = ctxt_pP->instance;
+    	CTXT_UE_DC(message_p).rnti = ctxt_pP->rnti;
+    	CTXT_UE_DC(message_p).frame = ctxt_pP->frame;
+    	CTXT_UE_DC(message_p).subframe = ctxt_pP->subframe;
+    	CTXT_UE_DC(message_p).eNB_index = ctxt_pP->eNB_index;
+    	CTXT_UE_DC(message_p).configured = ctxt_pP->configured;
+    	CTXT_UE_DC(message_p).brOption = ctxt_pP->brOption;
+
+        if(itti_send_msg_to_task(TASK_UE_DC, INSTANCE_DEFAULT, message_p) == 0){
+        	LOG_D(RRC,"CTXT sent to UE_DC Task\n");
+        } else{
+        	LOG_D(RRC,"Error retrieving ctxt in UE for DC\n");
+        	}
+      	  }//end ctxt
+	}
 
 
 //-----------------------------------------------------------------------------

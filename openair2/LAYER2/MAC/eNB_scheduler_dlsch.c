@@ -64,6 +64,7 @@
 //#define DEBUG_eNB_SCHEDULER 1
 
 #include "common/ran_context.h"
+#include "pdcp_flow_control.h"
 extern RAN_CONTEXT_t RC;
 
 
@@ -1132,6 +1133,7 @@ schedule_ue_spec(module_id_t module_idP,
             LOG_D(MAC, "[eNB %d], Frame %d, DCCH1->DLSCH, CC_id %d, Requesting %d bytes from RLC (RRC message)\n",
                   module_idP, frameP, CC_id,
                   TBS - ta_len - header_length_total - sdu_length_total - 3);
+
             sdu_lengths[num_sdus] += mac_rlc_data_req(module_idP,
                                      rnti,
                                      module_idP,
@@ -1179,6 +1181,49 @@ schedule_ue_spec(module_id_t module_idP,
           }
         }
 
+        //TBS Flow Control Update for Traffic only at MeNB/SeNB
+        if (RC.dc_enb_dataP->enable == TRUE){
+        	MessageDef			*itti_msg_p = NULL;
+            int					real_tbs = TBS - ta_len - header_length_total - sdu_length_total - 3;
+            if(real_tbs < 0)
+            	real_tbs = 0;
+
+            if (RC.dc_enb_dataP->fc_data_mac.avg_tbs == 0)
+            	RC.dc_enb_dataP->fc_data_mac.avg_tbs = (uint32_t) real_tbs;
+            else
+               	RC.dc_enb_dataP->fc_data_mac.avg_tbs = (uint32_t) round((1-RC.dc_enb_dataP->ccw_parameters.alpha)*RC.dc_enb_dataP->fc_data_mac.avg_tbs + RC.dc_enb_dataP->ccw_parameters.alpha*real_tbs);
+
+            /*printf("TTI-> TBS: %d available_TBS: %d Avg_available_TBS: %d CQI_reported %d\n", TBS, real_tbs,
+            		RC.dc_enb_dataP->fc_data_mac.avg_tbs, RC.dc_enb_dataP->fc_data_mac.cqi_vector.cqi_reported);*/
+
+            //Granularity to update TBS to PDCP -> 5ms so far
+            RC.dc_enb_dataP->fc_data_mac.nb_samples++;
+            if (RC.dc_enb_dataP->fc_data_mac.nb_samples % RC.dc_enb_dataP->ccw_parameters.CCr == 0){
+
+            	if (RC.dc_enb_dataP->eNB_type == 1){
+            		itti_msg_p	=	itti_alloc_new_message(TASK_MAC_ENB, FC_TBS_UPDATE);
+            		FC_TBS_UPDATE(itti_msg_p).avg_tbs 			= RC.dc_enb_dataP->fc_data_mac.avg_tbs;
+            		FC_TBS_UPDATE(itti_msg_p).avg_system_time = RC.dc_enb_dataP->fc_data_mac.avg_system_time;
+            		FC_TBS_UPDATE(itti_msg_p).tbs_source 		= 1; //MeNB
+                    if (itti_send_msg_to_task(TASK_PDCP_ENB, INSTANCE_DEFAULT, itti_msg_p) != 0){
+                      	printf("MAC, Error sending TBS UPDATE\n");
+                    }
+                } else {
+                   	itti_msg_p	=	itti_alloc_new_message(TASK_MAC_ENB, FC_TBS_X2U);
+                   	FC_TBS_X2U(itti_msg_p).avg_tbs 				= RC.dc_enb_dataP->fc_data_mac.avg_tbs;
+                  	FC_TBS_UPDATE(itti_msg_p).avg_system_time = RC.dc_enb_dataP->fc_data_mac.avg_system_time;
+                   	FC_TBS_X2U(itti_msg_p).tbs_source 			= 2; //SeNB
+                  	if (itti_send_msg_to_task(TASK_X2U, INSTANCE_DEFAULT, itti_msg_p) != 0){
+                   		printf("MAC, Error sending TBS UPDATE\n");
+                    }
+                }
+            }
+            //End Flow Control: TBS update
+        } else {
+          	//printf("SC-> TBS %d CQI_reported %d\n", TBS, RC.dc_enb_dataP->fc_data_mac.cqi_vector.cqi_reported);
+        }
+
+
         // TODO: lcid has to be sorted before the actual allocation (similar struct as ue_list).
         for (lcid = NB_RB_MAX - 1; lcid >= DTCH; lcid--) {
           // TODO: check if the lcid is active
@@ -1206,12 +1251,27 @@ schedule_ue_spec(module_id_t module_idP,
                                            );
 
             if (rlc_status.bytes_in_buffer > 0) {
-              LOG_D(MAC, "[eNB %d][USER-PLANE DEFAULT DRB] Frame %d : DTCH->DLSCH, Requesting %d bytes from RLC (lcid %d total hdr len %d)\n",
+            	LOG_D(MAC, "[eNB %d][USER-PLANE DEFAULT DRB] Frame %d : DTCH->DLSCH, Requesting %d bytes from RLC (lcid %d total hdr len %d)\n",
                     module_idP,
                     frameP,
                     TBS - ta_len - header_length_total - sdu_length_total - 3,
                     lcid,
                     header_length_total);
+
+            	//getting queueing time for flow control
+            	if (lcid == DTCH){
+            		float current_queueing_time = (float) rlc_status.bytes_in_buffer/(TBS - ta_len - header_length_total - sdu_length_total - 3);
+            		float current_service_time = (float) (rlc_status.bytes_in_buffer/rlc_status.pdus_in_buffer)/(TBS - ta_len - header_length_total - sdu_length_total - 3);
+            		if (RC.dc_enb_dataP->fc_data_mac.avg_system_time == 0 || RC.dc_enb_dataP->flow_control_type != 2)
+            			RC.dc_enb_dataP->fc_data_mac.avg_system_time = current_queueing_time + current_service_time;
+            		else
+            			RC.dc_enb_dataP->fc_data_mac.avg_system_time = (uint16_t) round(RC.dc_enb_dataP->fc_data_mac.avg_system_time*(1-RC.dc_enb_dataP->ccw_parameters.alpha)
+            					+ RC.dc_enb_dataP->ccw_parameters.alpha*(current_queueing_time + current_service_time));
+
+            		/*printf("TTI-> RLC_delay %.0f ms Avg_RLC_delay: %d ms RLC_buffer_size %d bytes\n", current_queueing_time + current_service_time,
+            				RC.dc_enb_dataP->fc_data_mac.avg_system_time, rlc_status.bytes_in_buffer);*/
+            	}
+
               sdu_lengths[num_sdus] = mac_rlc_data_req(module_idP,
                                       rnti,
                                       module_idP,
@@ -1250,6 +1310,12 @@ schedule_ue_spec(module_id_t module_idP,
               num_sdus++;
               ue_sched_ctrl->uplane_inactivity_timer = 0;
 
+              /*printf("RLC buffer %d bytes, nb_pdus %d, pdu_queueing_time %.2f ms, avg_queueing_time %d\n",
+                          			rlc_status.bytes_in_buffer,
+                          			rlc_status.pdus_in_buffer,
+              						rlc_status.head_time_in_rlc*0.001,
+              						RC.dc_enb_dataP->fc_data_mac.avg_queueing_time);*/
+
               // reset RRC inactivity timer after uplane activity
               ue_contextP = rrc_eNB_get_ue_context(RC.rrc[module_idP], rnti);
 
@@ -1261,7 +1327,13 @@ schedule_ue_spec(module_id_t module_idP,
                       CC_id,
                       rnti);
               }
-            } // end if (rlc_status.bytes_in_buffer > 0)
+            // end if (rlc_status.bytes_in_buffer > 0)
+            } else {
+            	if (lcid == DTCH && RC.dc_enb_dataP->fc_data_mac.avg_system_time > 0){
+                	RC.dc_enb_dataP->fc_data_mac.avg_system_time = (uint16_t) round(RC.dc_enb_dataP->fc_data_mac.avg_system_time*(1-RC.dc_enb_dataP->ccw_parameters.alpha));
+                	//printf("RLC_buffer_empty-> RLC_delay 0 ms Avg_RLC_delay: %d ms RLC_buffer_size 0 bytes\n", RC.dc_enb_dataP->fc_data_mac.avg_system_time);
+            	}
+            }
           } else {  // no TBS left
             break;  // break for (lcid = NB_RB_MAX - 1; lcid >= DTCH; lcid--)
           }
@@ -1670,6 +1742,28 @@ schedule_ue_spec(module_id_t module_idP,
   stop_meas(&eNB->schedule_dlsch);
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_SCHEDULE_DLSCH,
                                           VCD_FUNCTION_OUT);
+
+  /*Flow Control*/
+  /*if (RC.dc_enb_dataP->enable && eNB_UE_stats != NULL){
+	  MessageDef			*itti_msg_p = NULL;
+	  if (RC.dc_enb_dataP->eNB_type == 1){
+		  itti_msg_p	=	itti_alloc_new_message(TASK_MAC_ENB, FC_TBS_UPDATE);
+		  FC_TBS_UPDATE(itti_msg_p).current_tbs = eNB_UE_stats->TBS;
+	  	  FC_TBS_UPDATE(itti_msg_p).tbs_source 	= 1; //MeNB
+	  	  if (itti_send_msg_to_task(TASK_PDCP_ENB, INSTANCE_DEFAULT, itti_msg_p) != 0){
+	  		printf("MAC, Error sending TBS UPDATE\n");
+	  	  }
+	  } else {
+		  itti_msg_p	=	itti_alloc_new_message(TASK_MAC_ENB, FC_TBS_X2U);
+		  FC_TBS_X2U(itti_msg_p).current_tbs = eNB_UE_stats->TBS;
+		  FC_TBS_X2U(itti_msg_p).tbs_source 	= 2; //SeNB
+	   	if (itti_send_msg_to_task(TASK_X2U, INSTANCE_DEFAULT, itti_msg_p) != 0){
+	   		printf("MAC, Error sending TBS UPDATE\n");
+	   	}
+	  }
+  } //End Flow Control: TBS update
+  */
+
 }
 
 //------------------------------------------------------------------------------

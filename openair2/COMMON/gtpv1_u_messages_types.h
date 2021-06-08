@@ -34,6 +34,7 @@
 #define GTPV1U_ENB_TUNNEL_DATA_IND(mSGpTR)    (mSGpTR)->ittiMsg.Gtpv1uTunnelDataInd
 #define GTPV1U_ENB_TUNNEL_DATA_REQ(mSGpTR)    (mSGpTR)->ittiMsg.Gtpv1uTunnelDataReq
 #define GTPV1U_ENB_S1_REQ(mSGpTR)    (mSGpTR)->ittiMsg.gtpv1uS1Req
+#define GTPV1U_ENB_GET_CTXT(mSGpTR)    (mSGpTR)->ittiMsg.Gtpv1uGetCtxt
 
 #define GTPV1U_ALL_TUNNELS_TEID (teid_t)0xFFFFFFFF
 
@@ -103,4 +104,11 @@ typedef struct {
   in_addr_t             enb_ip_address_for_S1u_S12_S4_up;
   tcp_udp_port_t        enb_port_for_S1u_S12_S4_up;
 } Gtpv1uS1Req;
+
+typedef struct gtpv1u_enb_get_ctxt_s {
+	module_id_t	enb_id_for_DC;
+	rnti_t		ue_id_for_DC;					///get info to generate context from UE attached in SeNB
+	ebi_t		eps_bearer_id_for_DC;
+}gtpv1u_enb_get_ctxt_t;
+
 #endif /* GTPV1_U_MESSAGES_TYPES_H_ */

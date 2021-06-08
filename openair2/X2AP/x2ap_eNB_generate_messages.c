@@ -43,6 +43,9 @@
 #include "assertions.h"
 #include "conversions.h"
 
+#include "x2u_enb.h"
+#include "enb_config.h"
+
 int x2ap_eNB_generate_x2_setup_request(
   x2ap_eNB_instance_t *instance_p, x2ap_eNB_data_t *x2ap_eNB_data_p)
 {
@@ -194,6 +197,8 @@ int x2ap_eNB_generate_x2_setup_response(x2ap_eNB_instance_t *instance_p, x2ap_eN
   uint32_t  len;
   int       ret = 0;
 
+  MessageDef						  *message_p = NULL;
+
   DevAssert(instance_p != NULL);
   DevAssert(x2ap_eNB_data_p != NULL);
 
@@ -314,6 +319,19 @@ int x2ap_eNB_generate_x2_setup_response(x2ap_eNB_instance_t *instance_p, x2ap_eN
   MSC_LOG_TX_MESSAGE (MSC_X2AP_SRC_ENB, MSC_X2AP_TARGET_ENB, NULL, 0, "0 X2Setup/successfulOutcome assoc_id %u", x2ap_eNB_data_p->assoc_id);
 
   x2ap_eNB_itti_send_sctp_data_req(instance_p->instance, x2ap_eNB_data_p->assoc_id, buffer, len, 0);
+
+  /*Analyze if dual connectivity is enabled
+  * if true, send configuration parameters to x2u task*/
+    if (is_dc_enabled ()){
+  	  message_p = itti_alloc_new_message(TASK_X2AP, DC_ENB_INIT);
+  	  if (message_p == NULL) {
+  	   	 X2AP_ERROR("It's not possible to allocate a message to TASK_UDP\n");
+  	     return -1;
+  	  }
+
+  	RCconfig_DC(message_p); /*get the configuration parameters for dual connectivity*/
+  	itti_send_msg_to_task(TASK_X2U, INSTANCE_DEFAULT, message_p);
+    }
 
   return ret;
 }

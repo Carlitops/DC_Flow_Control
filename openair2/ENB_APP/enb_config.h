@@ -124,5 +124,7 @@ void fill_eMTC_configuration(MessageDef *msg_p,  ccparams_eMTC_t *eMTCconfig, in
 int RCconfig_DU_F1(MessageDef *msg_p, uint32_t i);
 void handle_f1ap_setup_resp(f1ap_setup_resp_t *resp);
 
+int RCconfig_DC(MessageDef *msg_p);
+
 #endif /* ENB_CONFIG_H_ */
 /** @} */

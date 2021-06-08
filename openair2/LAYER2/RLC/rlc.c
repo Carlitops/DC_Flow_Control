@@ -27,6 +27,7 @@
   EMAIL   : Lionel.Gauthier at eurecom dot fr
 */
 #define RLC_C
+#include <string.h>
 #include "rlc.h"
 #include "mem_block.h"
 #include "../MAC/mac_extern.h"
@@ -36,8 +37,10 @@
 #include "common/utils/LOG/vcd_signal_dumper.h"
 #include "targets/COMMON/openairinterface5g_limits.h"
 #include "assertions.h"
-
+#include "intertask_interface.h"
 #include "common/ran_context.h"
+#include "ue_dc_messages_types.h"
+
 extern RAN_CONTEXT_t RC;
 
 extern boolean_t pdcp_data_ind(
@@ -587,6 +590,7 @@ void rlc_data_ind     (
   const sdu_size_t  sdu_sizeP,
   mem_block_t      *sdu_pP) {
   //-----------------------------------------------------------------------------
+
   LOG_D(RLC, PROTOCOL_CTXT_FMT"[%s %u] Display of rlc_data_ind: size %u\n",
         PROTOCOL_CTXT_ARGS(ctxt_pP),
         (srb_flagP) ? "SRB" : "DRB",
@@ -611,9 +615,24 @@ void rlc_data_ind     (
       itti_send_msg_to_task(TASK_DU_F1, ENB_MODULE_ID_TO_INSTANCE(ctxt_pP->module_id), msg);
       return;
     }
-  } // case monolithic eNodeB or UE
+    get_pdcp_data_ind_func()(ctxt_pP, srb_flagP, MBMS_flagP, rb_idP, sdu_sizeP, sdu_pP,NULL,NULL);
 
-  get_pdcp_data_ind_func()(ctxt_pP, srb_flagP, MBMS_flagP, rb_idP, sdu_sizeP, sdu_pP,NULL,NULL);
+  } else if ((ctxt_pP->enb_flag == ENB_FLAG_NO) && (srb_flagP == 0) && (RC.dc_ue_dataP->enabled == TRUE) && (RC.dc_ue_dataP->ue_type == FALSE)){
+	  MessageDef *msg_dc;
+	  unsigned char	*new_buffer;
+	  new_buffer = (unsigned char *)malloc(sdu_sizeP);
+	  memcpy(new_buffer, sdu_pP->data, sdu_sizeP);
+	  msg_dc = itti_alloc_new_message(TASK_RLC_UE, UE_DC_DATA_REQ);
+	  UE_DC_DATA_REQ(msg_dc).sdu_size_dc = sdu_sizeP;
+	  UE_DC_DATA_REQ(msg_dc).sdu_buffer_dc_p = new_buffer;
+	  if (itti_send_msg_to_task(TASK_UE_DC, INSTANCE_DEFAULT, msg_dc) == 0){
+		  LOG_D(RLC, "RLC_SDU has been forwarded to UE_DC TASK\n");
+	  }else {
+		  LOG_E(RLC, "It was not possible to forward RLC_SDU to UE_DC TASK\n");
+	  	 }
+  } else {
+  		 get_pdcp_data_ind_func()(ctxt_pP, srb_flagP, MBMS_flagP, rb_idP, sdu_sizeP, sdu_pP,NULL,NULL);
+  }
 }
 //-----------------------------------------------------------------------------
 void rlc_data_conf     (const protocol_ctxt_t *const ctxt_pP,

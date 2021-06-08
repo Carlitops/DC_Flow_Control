@@ -799,6 +799,8 @@ include_directories("${OPENAIR2_DIR}/LAYER2/RLC/TM_v9.3.0")
 include_directories("${OPENAIR2_DIR}/LAYER2/PDCP_v10.1.0")
 include_directories("${OPENAIR2_DIR}/RRC/LTE/MESSAGES")
 include_directories("${OPENAIR2_DIR}/RRC/LTE")
+include_directories("${OPENAIR2_DIR}/UE_DC")
+include_directories("${OPENAIR2_DIR}/X2U")
 include_directories("${OPENAIR_DIR}/common/utils")
 include_directories("${OPENAIR_DIR}/common/utils/ocp_itti")
 include_directories("${OPENAIR3_DIR}/NAS/COMMON")
@@ -1366,6 +1368,8 @@ set(L2_SRC
   ${PDCP_DIR}/pdcp_util.c
   ${PDCP_DIR}/pdcp_security.c
   ${PDCP_DIR}/pdcp_netlink.c
+  ${PDCP_DIR}/pdcp_reordering.c
+  ${PDCP_DIR}/pdcp_flow_control.c
   ${RLC_AM_DIR}/rlc_am.c
   ${RLC_AM_DIR}/rlc_am_init.c
   ${RLC_AM_DIR}/rlc_am_timer_poll_retransmit.c
@@ -1411,6 +1415,8 @@ set(L2_SRC_UE
   ${PDCP_DIR}/pdcp_util.c
   ${PDCP_DIR}/pdcp_security.c
   ${PDCP_DIR}/pdcp_netlink.c
+  ${PDCP_DIR}/pdcp_reordering.c
+  ${PDCP_DIR}/pdcp_flow_control.c
   ${RLC_AM_DIR}/rlc_am.c
   ${RLC_AM_DIR}/rlc_am_init.c
   ${RLC_AM_DIR}/rlc_am_timer_poll_retransmit.c
@@ -1500,6 +1506,15 @@ add_library(L2_UE
 add_dependencies(L2_UE rrc_flag s1ap_flag x2_flag)
 
 include_directories(${NFAPI_USER_DIR})
+
+add_library(UE_DC ${OPENAIR2_DIR}/UE_DC/ue_dc.c
+		  ${OPENAIR2_DIR}/UE_DC/udp_ue_task.c)
+add_dependencies(UE_DC rrc_flag)
+
+add_library(X2U ${OPENAIR2_DIR}/X2U/x2u_enb.c)
+add_dependencies(X2U rrc_flag)
+
+
 
 # L3 Libs
 ##########################
@@ -2078,7 +2093,7 @@ add_dependencies(lte-softmodem rrc_flag s1ap_flag x2_flag)
 
 target_link_libraries (lte-softmodem
   -Wl,--start-group
-  RRC_LIB S1AP_LIB S1AP_ENB F1AP_LIB F1AP X2AP_LIB X2AP_ENB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB SCHED_RU_LIB PHY_COMMON PHY PHY_RU LFDS L2
+  RRC_LIB S1AP_LIB S1AP_ENB F1AP_LIB F1AP X2AP_LIB X2AP_ENB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB SCHED_RU_LIB PHY_COMMON PHY PHY_RU LFDS X2U UE_DC L2 
   ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} ${FLEXRAN_AGENT_LIB} ${FSPT_MSG_LIB} ${PROTO_AGENT_LIB} LFDS7
   NFAPI_COMMON_LIB NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
   -Wl,--end-group z dl)
@@ -2147,7 +2162,7 @@ add_dependencies(lte-softmodem-nos1 rrc_flag s1ap_flag x2_flag)
 
 target_link_libraries (lte-softmodem-nos1
   -Wl,--start-group
-  RRC_LIB F1AP F1AP_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB SCHED_RU_LIB PHY_COMMON PHY PHY_RU LFDS L2
+  RRC_LIB F1AP F1AP_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB SCHED_RU_LIB PHY_COMMON PHY PHY_RU LFDS X2U UE_DC L2 
   ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} ${FLEXRAN_AGENT_LIB} ${FSPT_MSG_LIB} ${PROTO_AGENT_LIB} LFDS7
   NFAPI_COMMON_LIB NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
   -Wl,--end-group z dl)
@@ -2187,7 +2202,7 @@ add_executable(lte-uesoftmodem
 add_dependencies(lte-uesoftmodem rrc_flag s1ap_flag x2_flag)
 target_link_libraries (lte-uesoftmodem
   -Wl,--start-group
-  RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB F1AP F1AP_LIB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_RU_LIB SCHED_UE_LIB PHY_COMMON PHY_UE PHY_RU LFDS L2_UE SIMU
+  RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB F1AP F1AP_LIB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_RU_LIB SCHED_UE_LIB PHY_COMMON PHY_UE PHY_RU LFDS L2_UE UE_DC SIMU
   ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} LFDS7 ${ATLAS_LIBRARIES}
   NFAPI_COMMON_LIB NFAPI_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
   -Wl,--end-group z dl)
@@ -2228,7 +2243,7 @@ add_dependencies(lte-uesoftmodem-nos1 rrc_flag s1ap_flag x2_flag)
 
 target_link_libraries (lte-uesoftmodem-nos1
   -Wl,--start-group
-  RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB F1AP F1AP_LIB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_RU_LIB SCHED_UE_LIB PHY_COMMON PHY_UE PHY_RU LFDS L2_UE SIMU
+  RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB F1AP F1AP_LIB GTPV1U SECU_CN SECU_OSA UTIL HASHTABLE SCTP_CLIENT UDP SCHED_RU_LIB SCHED_UE_LIB PHY_COMMON PHY_UE PHY_RU LFDS L2_UE UE_DC SIMU
   ${MSC_LIB} ${RAL_LIB} ${NAS_UE_LIB} ${ITTI_LIB} ${FLPT_MSG_LIB} ${ASYNC_IF_LIB} LFDS7 ${ATLAS_LIBRARIES}
   NFAPI_COMMON_LIB NFAPI_LIB NFAPI_PNF_LIB NFAPI_USER_LIB
   -Wl,--end-group z dl)
@@ -2305,7 +2320,7 @@ add_executable(test_epc_generate_scenario
   ${OPENAIR3_DIR}/S1AP/s1ap_eNB_defs.h
   )
 target_link_libraries (test_epc_generate_scenario
-  -Wl,--start-group RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB F1AP_LIB F1AP GTPV1U LIB_NAS_UE SECU_CN UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB PHY LFDS ${ITTI_LIB} ${MSC_LIB} L2 -Wl,--end-group pthread m rt crypt sctp ${LIBXML2_LIBRARIES} ${LIBXSLT_LIBRARIES} ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES} ${CONFIG_LIBRARIES}
+  -Wl,--start-group RRC_LIB S1AP_LIB S1AP_ENB X2AP_LIB X2AP_ENB F1AP_LIB F1AP GTPV1U LIB_NAS_UE SECU_CN UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB PHY UE_DC X2U LFDS ${ITTI_LIB} ${MSC_LIB} L2 -Wl,--end-group pthread m rt crypt sctp ${LIBXML2_LIBRARIES} ${LIBXSLT_LIBRARIES} ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES} ${CONFIG_LIBRARIES}
   )
 
 add_executable(test_epc_play_scenario
@@ -2324,7 +2339,7 @@ add_executable(test_epc_play_scenario
   )
 target_include_directories(test_epc_play_scenario PUBLIC /usr/local/share/asn1c)
 target_link_libraries (test_epc_play_scenario
-  -Wl,--start-group RRC_LIB S1AP_LIB X2AP_LIB X2AP_ENB F1AP_LIB F1AP GTPV1U LIB_NAS_UE SECU_CN UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB PHY_COMMON PHY PHY_UE LFDS ${ITTI_LIB} ${MSC_LIB} -Wl,--end-group pthread m rt crypt sctp ${LIBXML2_LIBRARIES} ${LIBXSLT_LIBRARIES} ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES} ${CONFIG_LIBRARIES}
+  -Wl,--start-group RRC_LIB S1AP_LIB X2AP_LIB X2AP_ENB F1AP_LIB F1AP GTPV1U LIB_NAS_UE SECU_CN UTIL HASHTABLE SCTP_CLIENT UDP SCHED_LIB PHY_COMMON PHY PHY_UE UE_DC X2U LFDS ${ITTI_LIB} ${MSC_LIB} -Wl,--end-group pthread m rt crypt sctp ${LIBXML2_LIBRARIES} ${LIBXSLT_LIBRARIES} ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES} ${CONFIG_LIBRARIES}
   )
 
 
@@ -2365,7 +2380,7 @@ if (${T_TRACER})
         oai_eth_transpro
         FLPT_MSG ASYNC_IF FLEXRAN_AGENT HASHTABLE MSC UTIL OMG_SUMO SECU_OSA
         SECU_CN SCHED_LIB SCHED_RU_LIB SCHED_UE_LIB PHY L2 default_sched
-        remote_sched RAL CN_UTILS GTPV1U SCTP_CLIENT UDP LIB_NAS_UE LFDS
+        remote_sched RAL CN_UTILS GTPV1U UE_DC X2U SCTP_CLIENT UDP LIB_NAS_UE LFDS
         LFDS7 SIMU OPENAIR0_LIB PHY_MEX coding)
     if (TARGET ${i})
       add_dependencies(${i} generate_T)

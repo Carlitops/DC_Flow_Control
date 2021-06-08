@@ -296,3 +296,4 @@ typedef struct protocol_ctxt_s {
 #define exit_fun(msg) exit_function(__FILE__,__FUNCTION__,__LINE__,msg)
 void exit_function(const char *file, const char *function, const int line, const char *s);
 #endif
+

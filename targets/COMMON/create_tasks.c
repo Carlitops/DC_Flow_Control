@@ -31,6 +31,7 @@
     #include "s1ap_eNB.h"
     #include "udp_eNB_task.h"
     #include "gtpv1u_eNB_task.h"
+	#include "x2u_enb.h"
   #if ENABLE_RAL
     #include "lteRALue.h"
     #include "lteRALenb.h"
@@ -78,6 +79,13 @@ int create_tasks(uint32_t enb_nb) {
       AssertFatal(rc >= 0, "Create task for X2AP failed\n");
     } else {
       LOG_I(X2AP, "X2AP is disabled.\n");
+    }
+
+    if (is_dc_enabled()){
+    	rc = itti_create_task(TASK_X2U, x2u_enb_task, NULL);
+    	AssertFatal(rc >= 0, "Create task for X2U failed\n");
+    }else {
+    	LOG_I(X2U, "Dual Connectivity is disabled.\n");
     }
   }
 

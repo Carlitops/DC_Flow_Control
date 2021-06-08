@@ -22,7 +22,7 @@
 /* eNB application layer -> X2AP messages */
 /* ITTI LOG messages */
 /* ENCODER */
-MESSAGE_DEF(X2AP_RESET_REQUST_LOG               , MESSAGE_PRIORITY_MED, IttiMsgText                      , x2ap_reset_request_log)
+MESSAGE_DEF(X2AP_RESET_REQUEST_LOG               , MESSAGE_PRIORITY_MED, IttiMsgText                      , x2ap_reset_request_log)
 MESSAGE_DEF(X2AP_RESOURCE_STATUS_RESPONSE_LOG   , MESSAGE_PRIORITY_MED, IttiMsgText                      , x2ap_resource_status_response_log)
 MESSAGE_DEF(X2AP_RESOURCE_STATUS_FAILURE_LOG    , MESSAGE_PRIORITY_MED, IttiMsgText                      , x2ap_resource_status_failure_log)
 

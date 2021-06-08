@@ -55,6 +55,8 @@
 #include "RRC_config_tools.h"
 #include "enb_paramdef.h"
 #include "proto_agent.h"
+//#include "x2u_enb.h"
+
 #define RRC_INACTIVITY_THRESH 0
 
 extern uint16_t sf_ahead;
@@ -2872,3 +2874,33 @@ void read_config_and_init(void) {
     RCconfig_RRC(enb_id, RC.rrc[enb_id],macrlc_has_f1[enb_id]);
   }
 }
+
+int RCconfig_DC(MessageDef *msg_p){
+	paramdef_t		DCParams[]	 = DCPARAMS_DESC;
+	config_get(DCParams, sizeof(DCParams)/sizeof(paramdef_t), ENB_CONFIG_STRING_DC_CONFIG);
+
+    DC_ENB_INIT(msg_p).enable = TRUE;
+	DC_ENB_INIT(msg_p).x2u_port = *(DCParams[DC_PORT_FOR_X2U_IDX].uptr);
+
+	if(strcasecmp(*(DCParams[DC_ENB_TYPE_IDX].strptr), "menb") == 0){
+		DC_ENB_INIT(msg_p).eNB_type  = 1; //MeNB
+	}else {
+		DC_ENB_INIT(msg_p).eNB_type  = 2; //SeNB;
+	}
+	strcpy(DC_ENB_INIT(msg_p).local_eNB_address,*(DCParams[DC_LOCAL_ENB_ADDRESS_IDX].strptr));
+	strcpy(DC_ENB_INIT(msg_p).remote_eNB_address,*(DCParams[DC_REMOTE_ENB_ADDRESS_IDX].strptr));
+	DC_ENB_INIT(msg_p).flow_control_type = *(DCParams[DC_FLOW_CONTROL_TYPE_IDX].uptr);
+
+	//Flow Control
+	if (DC_ENB_INIT(msg_p).flow_control_type == 2){
+		RC.dc_enb_dataP->ccw_parameters.Tccw 	= *(DCParams[DC_T_CCW_IDX].uptr);
+		RC.dc_enb_dataP->ccw_parameters.Dq_max 	= *(DCParams[DC_DQ_MAX_IDX].uptr);
+		RC.dc_enb_dataP->ccw_parameters.CCr 	= *(DCParams[DC_CCR_IDX].uptr);
+		RC.dc_enb_dataP->ccw_parameters.alpha 	= (float) *(DCParams[DC_ALPHA_IDX].uptr);
+	}
+
+	printf("Port %u\n and Flow Control %d\n",DC_ENB_INIT(msg_p).x2u_port,DC_ENB_INIT(msg_p).flow_control_type);
+
+	return 0;
+}
+

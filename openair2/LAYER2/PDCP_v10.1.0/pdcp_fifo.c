@@ -126,6 +126,7 @@ int pdcp_fifo_flush_sdus(const protocol_ctxt_t *const  ctxt_pP) {
                    sizeof(sidelink_pc5s_element), 0, (struct sockaddr *)&prose_pdcp_addr,sizeof(prose_pdcp_addr) );
     } else if (UE_NAS_USE_TUN) {
       ret = write(nas_sock_fd[ctxt_pP->module_id], &(sdu_p->data[sizeof(pdcp_data_ind_header_t)]),sizeToWrite );
+      printf("SDU delivered to upper layers\n");
     } else if (ENB_NAS_USE_TUN) {
       ret = write(nas_sock_fd[0], &(sdu_p->data[sizeof(pdcp_data_ind_header_t)]),sizeToWrite );
     } else if (PDCP_USE_NETLINK) {

@@ -41,6 +41,10 @@
 
 #include "rlc_um_very_simple_test.h"
 
+#include "common/ran_context.h"
+#include "pdcp_flow_control.h"
+extern RAN_CONTEXT_t RC;
+
 //-----------------------------------------------------------------------------
 void rlc_um_stat_req     (rlc_um_entity_t *rlc_pP,
                           unsigned int *stat_tx_pdcp_sdu,
@@ -398,7 +402,7 @@ rlc_um_mac_status_indication (const protocol_ctxt_t *const ctxt_pP, void *rlc_pP
 
       status_resp.buffer_occupancy_in_pdus = rlc_p->input_sdus.nb_elements;
       diff_time =   ctxt_pP->frame - ((struct rlc_um_tx_sdu_management *)mb_p->data)->sdu_creation_time;
-      status_resp.head_sdu_creation_time = (diff_time > 0 ) ? (uint32_t) diff_time :  (uint32_t)(0xffffffff - diff_time + ctxt_pP->frame) ;
+      status_resp.head_sdu_creation_time = (diff_time > 0 ) ? (uint32_t) diff_time :  (uint32_t)(0xffffffff - diff_time + ctxt_pP->frame);
       //msg("rlc_p status for ctxt_pP->frame %d diff time %d resp %d\n", ctxt_pP->frame, diff_time,status_resp.head_sdu_creation_time) ;
       sdu_size            = ((struct rlc_um_tx_sdu_management *) mb_p->data)->sdu_size;
       sdu_remaining_size  = ((struct rlc_um_tx_sdu_management *) mb_p->data)->sdu_remaining_size;
@@ -614,6 +618,7 @@ rlc_um_data_req (const protocol_ctxt_t *const ctxt_pP, void *rlc_pP, mem_block_t
       (sdu_pP->data))->sdu_size;
   ((struct rlc_um_tx_sdu_management *) (sdu_pP->data))->sdu_segmented_size = 0;
   ((struct rlc_um_tx_sdu_management *) (sdu_pP->data))->sdu_creation_time = ctxt_pP->frame;
+
   //rlc_p->next_sdu_index = (rlc_p->next_sdu_index + 1) % rlc_p->size_input_sdus_buffer;
   rlc_p->stat_tx_pdcp_sdu   += 1;
   rlc_p->stat_tx_pdcp_bytes += ((struct rlc_um_tx_sdu_management *) (sdu_pP->data))->sdu_size;

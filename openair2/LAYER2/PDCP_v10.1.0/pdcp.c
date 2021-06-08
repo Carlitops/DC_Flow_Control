@@ -57,13 +57,14 @@
 #include "openair2/RRC/NAS/nas_config.h"
 # include "intertask_interface.h"
 
+#include "pdcp_reordering.h"
+#include "pdcp_flow_control.h"
+
 
 #  include "gtpv1u_eNB_task.h"
 #  include "gtpv1u.h"
 
 #include "ENB_APP/enb_config.h"
-
-
 
 extern int otg_enabled;
 extern uint8_t nfapi_mode;
@@ -124,6 +125,10 @@ boolean_t pdcp_data_req(
   hashtable_rc_t     h_rc;
   uint8_t            rb_offset= (srb_flagP == 0) ? DTCH -1 : 0;
   uint16_t           pdcp_uid=0;
+
+  MessageDef     *messageDC_p       = NULL;
+  unsigned char *sent_pduP;
+
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PDCP_DATA_REQ,VCD_FUNCTION_IN);
   CHECK_CTXT_ARGS(ctxt_pP);
 #if T_TRACER
@@ -156,6 +161,9 @@ boolean_t pdcp_data_req(
 
   key = PDCP_COLL_KEY_VALUE(ctxt_pP->module_id, ctxt_pP->rnti, ctxt_pP->enb_flag, rb_idP, srb_flagP);
   h_rc = hashtable_get(pdcp_coll_p, key, (void **)&pdcp_p);
+
+  //Copy hash key for flow control
+  RC.dc_enb_dataP->pdcp_hash_key_eNB = key;
 
   if (h_rc != HASH_TABLE_OK) {
     if (modeP != PDCP_TRANSMISSION_MODE_TRANSPARENT) {
@@ -353,7 +361,7 @@ boolean_t pdcp_data_req(
     LOG_DUMPMSG(PDCP,DEBUG_PDCP,(char *)pdcp_pdu_p->data,pdcp_pdu_size,
                 "[MSG] PDCP DL %s PDU on rb_id %d\n",(srb_flagP)? "CONTROL" : "DATA", rb_idP);
 
-    if ((pdcp_pdu_p!=NULL) && (srb_flagP == 0) && (ctxt_pP->enb_flag == 1)) {
+    if ((pdcp_pdu_p!=NULL) && (srb_flagP == 0) && (ctxt_pP->enb_flag == 1) && (RC.dc_enb_dataP->enable == 2)) {
       LOG_D(PDCP, "pdcp data req on drb %d, size %d, rnti %x, node_type %d \n",
             rb_idP, pdcp_pdu_size, ctxt_pP->rnti, RC.rrc[ctxt_pP->module_id]->node_type);
 
@@ -392,8 +400,127 @@ boolean_t pdcp_data_req(
             break;
         } // switch case
       } /* end if node_type is not DU */
+    } else if ((ctxt_pP->enb_flag == 1) && (srb_flagP == 0) && (modeP == 2) && (RC.dc_enb_dataP->enable == TRUE) && (RC.dc_enb_dataP->eNB_type == 1)){
+    	/*split bearer for dual connectivity*/
+
+    	boolean_t	to_mn = FALSE;
+    	boolean_t	to_sn = FALSE;
+    	switch (RC.dc_enb_dataP->flow_control_type){
+    		case 1:
+    			//RR algorithm
+    			if (current_sn % 2 == 0)
+    				to_mn = TRUE;
+    			else
+    				to_sn = TRUE;
+
+    			break;
+
+    		case 2:
+    			//CCW
+    		{
+    			if (pdcp_p->tx_hfn == 0 && current_sn < 50){
+    				// apply RR logic until get statistic from MN and SN
+    				if (current_sn % 2 == 0)
+    					to_mn = TRUE;
+    			    else
+    			    	to_sn = TRUE;
+    			} else {
+
+    				/*CCW is activated, then PDUs go to PDCP buffer for Flow Control*/
+    				store_pdu_FCbuffer(pdcp_pdu_p->data, pdcp_pdu_size, rb_idP, ctxt_pP);
+    				rlc_status = 1;
+    				free(pdcp_pdu_p);
+    			}
+    		}
+    			break;
+
+    		case 3:
+    			//Delay-based
+    		{
+    			list_t	*fc_buffer = NULL;
+				fc_buffer =  &flow_control_buffer;
+				boolean_t	store_pdu = FALSE;
+
+				if (fc_buffer->head != NULL){
+					store_pdu_FCbuffer(pdcp_pdu_p->data, pdcp_pdu_size, rb_idP, ctxt_pP);
+					free(pdcp_pdu_p);
+					ret=TRUE;
+				} else if (pdcp_p->fc_MN.avg_system_time == 0 && pdcp_p->fc_SN.avg_system_time == 0){
+    				//collect time  info from MN and SN
+    				if (current_sn % 2 == 0)
+    					to_mn = TRUE;
+    				else
+    					to_sn = TRUE;
+    			} else if (pdcp_p->fc_MN.avg_system_time < pdcp_p->fc_SN.avg_system_time){
+    				if (pdcp_p->fc_MN.avg_system_time <= 30)
+    					to_mn = TRUE;
+    				else
+    					store_pdu = TRUE;
+    			} else {
+    					if (pdcp_p->fc_SN.avg_system_time <= 40)
+    						to_sn = TRUE;
+    					else
+    						store_pdu = TRUE;
+    			}
+
+				if (store_pdu == TRUE) {
+					store_pdu_FCbuffer(pdcp_pdu_p->data, pdcp_pdu_size, rb_idP, ctxt_pP);
+					free(pdcp_pdu_p);
+					ret=TRUE;
+				}
+    		}
+    			break;
+
+    	}
+
+    	if (to_mn == TRUE){
+    		printf("Sending PDCP-PDU %d via MN\n",current_sn);
+    		rlc_status = rlc_data_req(ctxt_pP, srb_flagP, MBMS_FLAG_NO, rb_idP, muiP, confirmP, pdcp_pdu_size, pdcp_pdu_p, NULL, NULL);
+    	}
+
+    	if (to_sn == TRUE){
+    		printf("Sending PDCP-PDU %d via SN\n",current_sn);
+    		//sent_pduP = (unsigned char *)malloc(pdcp_pdu_size);
+    		//memcpy(sent_pduP, pdcp_pdu_p->data, pdcp_pdu_size );
+    		messageDC_p = itti_alloc_new_message(TASK_PDCP_ENB, DC_ENB_DATA_REQ);
+    		DC_ENB_DATA_REQ(messageDC_p).pdu_size_dc = pdcp_pdu_size;
+    		DC_ENB_DATA_REQ(messageDC_p).pdu_buffer_dcP = pdcp_pdu_p->data;
+    		rlc_status = 1;
+    		if (itti_send_msg_to_task(TASK_X2U, INSTANCE_DEFAULT, messageDC_p) != 0){
+    			LOG_E(PDCP,"Impossible to send Split Bearer\n");
+    			rlc_status =-1;
+    		}
+    	}
+
+    	switch (rlc_status) {
+    		case RLC_OP_STATUS_OK:
+    			LOG_D(PDCP, "Data sending request over RLC succeeded!\n");
+    	       	ret=TRUE;
+    	       	break;
+
+    	    case RLC_OP_STATUS_BAD_PARAMETER:
+    	    	LOG_W(PDCP, "Data sending request over RLC failed with 'Bad Parameter' reason!\n");
+    	       	ret= FALSE;
+    	       	break;
+
+    	    case RLC_OP_STATUS_INTERNAL_ERROR:
+    	        LOG_W(PDCP, "Data sending request over RLC failed with 'Internal Error' reason!\n");
+    	        ret= FALSE;
+    	        break;
+
+    	    case RLC_OP_STATUS_OUT_OF_RESSOURCES:
+    	        LOG_W(PDCP, "Data sending request over RLC failed with 'Out of Resources' reason!\n");
+    	        ret= FALSE;
+    	        break;
+
+    	    default:
+    	        LOG_W(PDCP, "RLC returned an unknown status code after PDCP placed the order to send some data (Status Code:%d)\n", rlc_status);
+    	        ret= FALSE;
+    	        break;
+    	} // end of switch rlc_status
+    	       	//end of split bearer
     } else { // SRB
-      if (ctxt_pP->enb_flag == ENB_FLAG_YES && NODE_IS_CU(RC.rrc[ctxt_pP->module_id]->node_type)) {
+    			if (ctxt_pP->enb_flag == ENB_FLAG_YES && NODE_IS_CU(RC.rrc[ctxt_pP->module_id]->node_type)) {
         // DL transfer
         MessageDef                            *message_p;
         // Note: the acyual task must be TASK_PDCP_ENB, but this task is not created
@@ -451,7 +578,7 @@ boolean_t pdcp_data_req(
             break;
         } // switch case
       }
-    }
+    }//end of else
   }
 
   if (ctxt_pP->enb_flag == ENB_FLAG_YES) {
@@ -978,6 +1105,138 @@ pdcp_data_ind(
 
 #endif
 
+/* Here we start implementing PDCP Reordering for Dual Connectivity only for UE (downlink)*/
+ if(ctxt_pP->enb_flag == ENB_FLAG_NO && srb_flagP == 0){ //only valid if it's a UE and for data
+  if (RC.dc_ue_dataP->enabled == TRUE && RC.dc_ue_dataP->reordering == TRUE){
+	  LOG_I(PDCP,"PDCP Reordering starts\n");
+	  pdcp_sn_t max_seq_num = pdcp_calculate_max_seq_num_for_given_size(pdcp_p->seq_num_size);
+
+	  if((pdcp_buffer->cnt == 0 && sequence_number == pdcp_p->last_submitted_pdcp_rx_sn +1) ||
+			  sequence_number == (pdcp_p->last_submitted_pdcp_rx_sn - pdcp_calculate_max_seq_num_for_given_size(pdcp_p->seq_num_size))){
+
+		  	  /*if TRUE, go to normal operation, otherwise go to reordering*/
+		  	  	  printf("PDUs are in-sequence\n");
+		  	  	  printf("arriving SN is : %d || last SN for in-sequence: %d\n",sequence_number,pdcp_p->last_submitted_pdcp_rx_sn);
+		  	  	  printf("rx_hfn: %x\n",pdcp_p->rx_hfn);
+		  	  	  //goto no_reorderdering;
+
+		  if (FALSE == packet_forwarded) {
+		      new_sdu_p = get_free_mem_block(sdu_buffer_sizeP - payload_offset + sizeof (pdcp_data_ind_header_t), __func__);
+	  	  	    if (new_sdu_p) {
+	  	  	      if ((MBMS_flagP == 0) && (pdcp_p->rlc_mode == RLC_MODE_AM)) {
+	  	  	        pdcp_p->last_submitted_pdcp_rx_sn = sequence_number;
+	  	  	      }
+
+		  	  	 memset(new_sdu_p->data, 0, sizeof (pdcp_data_ind_header_t));
+		  	  	 ((pdcp_data_ind_header_t *) new_sdu_p->data)->data_size = sdu_buffer_sizeP - payload_offset;
+		  	  	 ((pdcp_data_ind_header_t *) new_sdu_p->data)->rb_id = rb_id;
+		  	  	 ((pdcp_data_ind_header_t *) new_sdu_p->data)->inst  = ctxt_pP->module_id;
+
+		  	  	 memcpy(&new_sdu_p->data[sizeof (pdcp_data_ind_header_t)], &sdu_buffer_pP->data[payload_offset],
+		  	  	             sdu_buffer_sizeP - payload_offset);
+		  	  	 list_add_tail_eurecom (new_sdu_p, sdu_list_p);
+		  	  	}
+		 }
+		  packet_forwarded = TRUE;
+	  } else {
+		  printf("PDUs are out-of-order\n");
+		  printf("arriving SN is : %d || last sent SN: %d\n",sequence_number,pdcp_p->last_submitted_pdcp_rx_sn);
+		  printf("rx_hfn: %x\n",pdcp_p->rx_hfn);
+		  //block_sigusr2();
+		  /*if (pthread_mutex_lock(&pdcp_buffer_mutex) != 0) {
+		   	LOG_I(PDCP, "Error locking mutex\n");
+		   	return 0;//creo hay que borrar
+		  }*/
+
+		  if (check_pdcp_buff_SN_in(pdcp_buffer, pdcp_p->rx_hfn, sequence_number, pdcp_p->seq_num_size) == false){
+			  //int i=0;
+			  // We suppose that we already checked that this SN is not present in the list
+			  insert_pdcp_buff_elmt(pdcp_buffer,&sdu_buffer_pP->data[payload_offset],sdu_buffer_sizeP - payload_offset,
+			  						sequence_number, pdcp_p->rx_hfn, rb_id,	pdcp_p->seq_num_size);
+
+			  if ((sequence_number == pdcp_p->last_submitted_pdcp_rx_sn + 1)
+			  					|| (sequence_number == pdcp_p->last_submitted_pdcp_rx_sn
+			  							- pdcp_calculate_max_seq_num_for_given_size(pdcp_p->seq_num_size))){
+				  printf("cuando entro aca?\n");//entro cuando llega el pdu que estaba out of order
+
+			  	struct pdcp_buff_elmt *elmt_ret = NULL;
+			  	if (sequence_number == 0 && pdcp_p->rx_hfn == 0){
+			  		pdcp_p->last_submitted_pdcp_rx_sn = 0;
+			  	}
+			  	while((elmt_ret = remove_highcount_pdcp_buff_elmt(pdcp_buffer, pdcp_p->rx_hfn, pdcp_p->last_submitted_pdcp_rx_sn,
+			  			pdcp_p->seq_num_size)) != NULL){
+			  					// Deliver to higher layer
+			  		new_sdu_p = get_free_mem_block(elmt_ret->size + sizeof (pdcp_data_ind_header_t), __func__);
+
+			  		if (new_sdu_p) {
+			  			memset(new_sdu_p->data, 0, sizeof (pdcp_data_ind_header_t));
+			  			((pdcp_data_ind_header_t *) new_sdu_p->data)->data_size = elmt_ret->size;
+			  			((pdcp_data_ind_header_t *) new_sdu_p->data)->rb_id = elmt_ret->rb_id;
+
+			  			if (EPC_MODE_ENABLED) {
+			  				   if (UE_NAS_USE_TUN) {
+			  					  ((pdcp_data_ind_header_t *) new_sdu_p->data)->inst  = ctxt_pP->module_id;
+			  				   } else {
+  					              ((pdcp_data_ind_header_t *) new_sdu_p->data)->inst  = 1;
+					           }
+			  			   }
+
+			  			memcpy(&new_sdu_p->data[sizeof (pdcp_data_ind_header_t)], elmt_ret->sdu, elmt_ret->size);
+			  			list_add_tail_eurecom (new_sdu_p, sdu_list_p);
+			  			printf("pdu sent tu upper layers\n");
+			  			pdcp_p->last_submitted_pdcp_rx_sn = elmt_ret->sn;
+			  			pdcp_p->last_hfn = elmt_ret->hfn;
+			  			packet_forwarded = TRUE;
+			  			printf("now the last_sn is: %d and last_hfn is: %x",pdcp_p->last_submitted_pdcp_rx_sn,pdcp_p->last_hfn);
+			  		} else {
+			  			LOG_E(PDCP, "Error allocating buffer before delivering\n");
+			  			//free(elmt_ret);
+			  		}
+			  	} // While
+			  } else {
+				  packet_forwarded = TRUE;
+			  }
+			  //if check sequence_num
+
+			  //if (check_timer_armed(t_reordering) == TRUE){ // Check if t_reordering is running
+				  // if PDU with pdcp_p->reordering_pdcp_rx_count - 1 has been delivered to upper layer
+				  // stop and reset t_reordering
+				  //printf("entra a check_timer TRUE\n");
+				  //if ( ((pdcp_p->last_submitted_pdcp_rx_sn == pdcp_p->reordering_sn - 1) && (pdcp_p->last_hfn == pdcp_p->reordering_hfn))
+			  		//|| (pdcp_p->reordering_sn == 0 && pdcp_p->last_submitted_pdcp_rx_sn == pdcp_calculate_max_seq_num_for_given_size(pdcp_p->seq_num_size) - 1 &&
+			  			//	pdcp_p->last_hfn == pdcp_p->reordering_hfn - 1) )
+			  		//{
+			  			//disarm_timer(t_reordering); // This also resets t_reordering
+			  		//}
+			  	}
+
+//			  if (check_timer_armed(t_reordering) == false){
+			  	// If there is at least one stored PDCP sdu:
+			  	// start t_reordering
+			  	// pdcp_p->reordering_pdcp_rx_count = COUNT associated with rx_hfn and next_pdcp_next_sn
+//				  printf("entra a check_timer FALSE\n");
+//		  		if (pdcp_buffer != NULL){
+//			  		arm_timer(t_reordering);
+//			  		pdcp_p->reordering_sn = pdcp_p->next_pdcp_rx_sn;
+//			  		pdcp_p->reordering_hfn = pdcp_p->rx_hfn;
+//			  	}
+		  		//packet_forwarded = TRUE;
+//			  }
+
+//		  }//if check_buff
+		  //packet_forwarded = FALSE;
+
+		 /* if (pthread_mutex_unlock(&pdcp_buffer_mutex) != 0) {
+			  printf("[UE] error unlocking mutex for UE \n" );
+			  return 0;
+		  }*/
+		  //unblock_sigusr2();
+	  }//if out-of-order
+  }//if DC and Reordering is enabled
+ }//end of if UE
+  /////////////////////////////////////////////////////////////////
+
+ //no_reorderdering:
   if (FALSE == packet_forwarded) {
     new_sdu_p = get_free_mem_block(sdu_buffer_sizeP - payload_offset + sizeof (pdcp_data_ind_header_t), __func__);
 
@@ -1208,6 +1467,12 @@ pdcp_run (
         }
         break;
 
+        case FC_TBS_UPDATE:
+
+        	update_flow_control_variables(&msg_p->ittiMsg.fc_tbs_update);
+
+        break;
+
         default:
           LOG_E(PDCP, "Received unexpected message %s\n", ITTI_MSG_NAME (msg_p));
           break;
@@ -1217,6 +1482,18 @@ pdcp_run (
       AssertFatal (result == EXIT_SUCCESS, "Failed to free memory (%d)!\n", result);
     }
   } while(msg_p != NULL);
+
+  // Flow Control flush the buffer every 5ms
+
+  if (ctxt_pP->enb_flag == 1 && (pdcp_enb[ctxt_pP->module_id].subframe % RC.dc_enb_dataP->ccw_parameters.Tccw == 0) &&
+		  RC.dc_enb_dataP->enable == 1 && RC.dc_enb_dataP->flow_control_type == 2 && RC.dc_enb_dataP->eNB_type == 1){
+
+	 //calculate_splitting_ratio();
+	  list_t	*buffer_p = &flow_control_buffer;
+	  if (buffer_p->head != NULL)
+		  flush_FCbuffer();
+  }
+
 
   // IP/NAS -> PDCP traffic : TX, read the pkt from the upper layer buffer
   //  if (LINK_ENB_PDCP_TO_GTPV1U && ctxt_pP->enb_flag == ENB_FLAG_NO) {
@@ -1822,6 +2099,21 @@ pdcp_config_req_asn1 (
       pdcp_pP->rx_hfn                           = 0;
       pdcp_pP->last_submitted_pdcp_rx_sn        = 4095;
       pdcp_pP->first_missing_pdu                = -1;
+
+      // Initialize pdcp flow control variables
+      if (ctxt_pP->enb_flag == ENB_FLAG_YES){
+    	  pdcp_pP->fc_MN.current_avg_tbs = 0;
+          pdcp_pP->fc_MN.pdu_arrival_rate = 0.0;
+          pdcp_pP->fc_MN.sum_pdu_size 	  = 0;
+          pdcp_pP->fc_MN.avg_pdu_size	  = 0;
+          pdcp_pP->fc_MN.start_time		  = 0;
+          pdcp_pP->fc_MN.old_nb_pdus_tx	  = 0;
+
+
+          pdcp_pP->fc_SN.current_avg_tbs = 0;
+          pdcp_pP->fc_SN.old_nb_pdus_tx	 = 0;
+      }
+
       LOG_I(PDCP, PROTOCOL_PDCP_CTXT_FMT" Action ADD  LCID %d (%s id %d) "
             "configured with SN size %d bits and RLC %s\n",
             PROTOCOL_PDCP_CTXT_ARGS(ctxt_pP,pdcp_pP),
@@ -2042,6 +2334,22 @@ rrc_pdcp_config_req (
         LOG_D(PDCP,PROTOCOL_PDCP_CTXT_FMT" Config request : Action ADD:  radio bearer id %d (already added) configured\n",
               PROTOCOL_PDCP_CTXT_ARGS(ctxt_pP,pdcp_p),
               rb_idP);
+
+        // Initialize pdcp flow control variables
+              if (ctxt_pP->enb_flag == ENB_FLAG_YES){
+            	  pdcp_p->fc_MN.current_avg_tbs = 0;
+                  pdcp_p->fc_MN.pdu_arrival_rate = 0.0;
+                  pdcp_p->fc_MN.sum_pdu_size 	  = 0;
+                  pdcp_p->fc_MN.avg_pdu_size	  = 0;
+                  pdcp_p->fc_MN.start_time		  = 0;
+                  pdcp_p->fc_MN.old_nb_pdus_tx	  = 0;
+
+
+                  pdcp_p->fc_SN.current_avg_tbs = 0;
+                  pdcp_p->fc_SN.old_nb_pdus_tx	 = 0;
+              }
+
+
         break;
 
       case CONFIG_ACTION_MODIFY:
@@ -2101,12 +2409,17 @@ rrc_pdcp_config_req (
             pdcp_p->is_ue = FALSE;
           }
 
+          //reordering?
           pdcp_p->next_pdcp_tx_sn = 0;
           pdcp_p->next_pdcp_rx_sn = 0;
+
           pdcp_p->tx_hfn = 0;
           pdcp_p->rx_hfn = 0;
           /* SN of the last PDCP SDU delivered to upper layers */
           pdcp_p->last_submitted_pdcp_rx_sn = 4095;
+
+          pdcp_p->reordering_hfn = 0;
+          pdcp_p->reordering_sn = 0;
 
           if (rb_idP < DTCH) { // SRB
             pdcp_p->seq_num_size = 5;
@@ -2120,6 +2433,20 @@ rrc_pdcp_config_req (
           LOG_D(PDCP,PROTOCOL_PDCP_CTXT_FMT" Config request : Action ADD:  radio bearer id %d configured\n",
                 PROTOCOL_PDCP_CTXT_ARGS(ctxt_pP,pdcp_p),
                 rb_idP);
+          // Initialize pdcp flow control variables
+                if (ctxt_pP->enb_flag == ENB_FLAG_YES){
+              	  pdcp_p->fc_MN.current_avg_tbs = 0;
+                    pdcp_p->fc_MN.pdu_arrival_rate = 0.0;
+                    pdcp_p->fc_MN.sum_pdu_size 	  = 0;
+                    pdcp_p->fc_MN.avg_pdu_size	  = 0;
+                    pdcp_p->fc_MN.start_time		  = 0;
+                    pdcp_p->fc_MN.old_nb_pdus_tx	  = 0;
+
+
+                    pdcp_p->fc_SN.current_avg_tbs = 0;
+                    pdcp_p->fc_SN.old_nb_pdus_tx	 = 0;
+                }
+
         }
 
         break;
@@ -2256,6 +2583,7 @@ void pdcp_layer_init(void)
     LOG_W(PDCP, "Could not create RAW socket, MBMS packets will not be put to the network\n");
 
 #endif
+
   LOG_I(PDCP, "PDCP layer has been initialized\n");
   pdcp_output_sdu_bytes_to_write=0;
   pdcp_output_header_bytes_to_write=0;
@@ -2292,6 +2620,7 @@ void pdcp_layer_init(void)
   memset(Pdcp_stats_rx_aiat, 0, sizeof(Pdcp_stats_rx_aiat));
   memset(Pdcp_stats_rx_iat, 0, sizeof(Pdcp_stats_rx_iat));
   memset(Pdcp_stats_rx_outoforder, 0, sizeof(Pdcp_stats_rx_outoforder));
+
 }
 
 //-----------------------------------------------------------------------------

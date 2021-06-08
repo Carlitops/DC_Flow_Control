@@ -47,6 +47,7 @@
 #include "PHY/LTE_TRANSPORT/transport_common_proto.h"
 
 #include "common/ran_context.h"
+#include "pdcp_flow_control.h"
 
 extern RAN_CONTEXT_t RC;
 
@@ -169,6 +170,10 @@ store_dlsch_buffer(module_id_t Mod_id,
 }
 
 int cqi2mcs(int cqi) {
+	if (RC.dc_enb_dataP->fc_data_mac.cqi_vector.cqi_hack_enabled == TRUE){
+		cqi = hacked_cqi_eNB();
+	}
+	RC.dc_enb_dataP->fc_data_mac.cqi_vector.cqi_reported = cqi;
   return cqi_to_mcs[cqi];
 }
 

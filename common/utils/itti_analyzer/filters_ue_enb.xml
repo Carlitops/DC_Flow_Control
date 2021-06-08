@@ -143,7 +143,7 @@
     <TASK_RRC_UE enabled="1"/>
     <TASK_NAS_UE enabled="1"/>
     <TASK_RAL_UE enabled="1"/>
-  </origin_tasks>
+    <TASK_UE_DC enabled="1"></TASK_UE_DC></origin_tasks>
   <destination_tasks>
     <TASK_UNKNOWN enabled="1"/>
     <TASK_TIMER enabled="1"/>
@@ -166,5 +166,5 @@
     <TASK_RRC_UE enabled="1"/>
     <TASK_NAS_UE enabled="1"/>
     <TASK_RAL_UE enabled="1"/>
-  </destination_tasks>
+    <TASK_UE_DC enabled="1"></TASK_UE_DC></destination_tasks>
 </filters>
