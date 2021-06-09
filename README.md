@@ -1,5 +1,5 @@
 # DC_Flow_Control
-Implementation of Dual Connectivity and flow fontrol algorithms
+Implementation of Dual Connectivity and flow control algorithms
 
 # Content Description
 You will find the code for the eNB and for the UE in two separare branches, i.e., BS and UE, respectively.
