@@ -75,3 +75,4 @@ The configuration file for mUE is dc_mue and for sUE is dc_sue. They are located
 6. Start the iperf3 server in the mUE host
 7. Start the iperf3 client in the EPC host
 
+For any question, please send an email to carlos.pupiales@upc.edu
