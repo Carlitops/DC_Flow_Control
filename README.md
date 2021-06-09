@@ -48,7 +48,7 @@ The configuration file for MN is dc_MeNB and for SN is dc_SeNB. They are located
 6. Set the BH latency at the MN host, if required:
   a. tc qdisc del dev YOUR_INTERFACE_NAME root netem
   B. tc qdisc add dev eth1 root netem delay X2_DELAY_IN_MS
-7. The rest of the parameters are configured according your testbed environment, for further details pelase refer to https://gitlab.eurecom.fr/oai/openairinterface5g/-/wikis/OpenAirUsage
+7. The rest of the parameters are configured according to your testbed environment, for further details pelase refer to https://gitlab.eurecom.fr/oai/openairinterface5g/-/wikis/OpenAirUsage
 
 # mUE/sUE Configuration Instructions
 The configuration file for mUE is dc_mue and for sUE is dc_sue. They are located at UE/ci-scripts/conf_files.
