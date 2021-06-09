@@ -32,7 +32,7 @@ However, we have tested our implementation using:
 6. Install iperf3
 
 # Build Instructions for EPC
-1. Please follow this link for further details: https://mosaic5g.io/resources/mosaic5g-oai-snaps-tutorial.pdf
+1. Please follow this link for further details https://mosaic5g.io/resources/mosaic5g-oai-snaps-tutorial.pdf
 2. Install iperf3
 
 # MN/SN Configuration Instructions
@@ -41,17 +41,17 @@ The configuration file for MN is dc_MeNB and for SN is dc_SeNB. They are located
 2. Set the IP Addresses in subsection DC_LOCAL_ENB_ADDRESS and DC_REMOTE_ENB_ADDRESS
 3. Choose the Flow Control algorithm to evaluate using DC_FLOW_CONTROL_TYPE. Set the same algorithm for MN and SN
 For the CCW algorithm only, set the following parameters:
-4. DC_Tccw    -> current version supports values from 1 to 10 ms.
+4. DC_Tccw    -> current version supports values from 1 to 10 ms
 5. DC_Dq_max  -> default value is 20 ms
 6. DC_alpha   -> default value is 0.3
-For CCW and Delay-based algorithms, set the value of DC_CCr
-Set the BH latency at the MN host, if required:
-7. tc qdisc del dev YOUR_INTERFACE_NAME root netem
-8. tc qdisc add dev eth1 root netem delay X2_DELAY_IN_MS
+7. For CCW and Delay-based algorithms, set the value of DC_CCr
+Set the BH latency at the MN host, if required
+8. tc qdisc del dev YOUR_INTERFACE_NAME root netem
+9. tc qdisc add dev eth1 root netem delay X2_DELAY_IN_MS
 The rest of the parameters are configured according to your testbed environment, for further details pelase refer to https://gitlab.eurecom.fr/oai/openairinterface5g/-/wikis/OpenAirUsage
 
 # mUE/sUE Configuration Instructions
-The configuration file for mUE is dc_mue and for sUE is dc_sue. They are located at UE/ci-scripts/conf_files.
+The configuration file for mUE is dc_mue and for sUE is dc_sue. They are located at UE/ci-scripts/conf_files
 1. Go to the section DUAL_CONNECTIVITY_UE
 2. Set the IP Addresses in subsection DC_LOCAL_UE_ADDRESS and DC_REMOTE_UE_ADDRESS
 3. If you want to enable the 3GPP reordering mechanism, set DC_REORDERING_ENABLED to "yes". Only valid for mUE
