@@ -40,15 +40,15 @@ The configuration file for MN is dc_MeNB and for SN is dc_SeNB. They are located
 1. Go to the section DUAL_CONNECTIVITY
 2. Set the IP Addresses in subsection DC_LOCAL_ENB_ADDRESS and DC_REMOTE_ENB_ADDRESS
 3. Choose the Flow Control algorithm to evaluate using DC_FLOW_CONTROL_TYPE. Set the same algorithm for MN and SN
-4. For the CCW algorithm only, set the following parameters:
-  a. DC_Tccw    -> current version supports values from 1 to 10 ms.
-  b. DC_Dq_max  -> default value is 20 ms
-  c. DC_alpha   -> default value is 0.3
-5. For CCW and Delay-based algorithms, set the value of DC_CCr
-6. Set the BH latency at the MN host, if required:
-  a. tc qdisc del dev YOUR_INTERFACE_NAME root netem
-  B. tc qdisc add dev eth1 root netem delay X2_DELAY_IN_MS
-7. The rest of the parameters are configured according to your testbed environment, for further details pelase refer to https://gitlab.eurecom.fr/oai/openairinterface5g/-/wikis/OpenAirUsage
+For the CCW algorithm only, set the following parameters:
+4. DC_Tccw    -> current version supports values from 1 to 10 ms.
+5. DC_Dq_max  -> default value is 20 ms
+6. DC_alpha   -> default value is 0.3
+For CCW and Delay-based algorithms, set the value of DC_CCr
+Set the BH latency at the MN host, if required:
+7. tc qdisc del dev YOUR_INTERFACE_NAME root netem
+8. tc qdisc add dev eth1 root netem delay X2_DELAY_IN_MS
+The rest of the parameters are configured according to your testbed environment, for further details pelase refer to https://gitlab.eurecom.fr/oai/openairinterface5g/-/wikis/OpenAirUsage
 
 # mUE/sUE Configuration Instructions
 The configuration file for mUE is dc_mue and for sUE is dc_sue. They are located at UE/ci-scripts/conf_files.
@@ -60,19 +60,19 @@ The configuration file for mUE is dc_mue and for sUE is dc_sue. They are located
 
 # Usage Instructions
 1. Run the EPC acoording to https://mosaic5g.io/resources/mosaic5g-oai-snaps-tutorial.pdf
-2. In the MN host: 
-  a. cd cmake_targets/lte_build_oai/build 
-  b. ./lte-softmodem -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_MeNB.conf
-3. In the SN host: 
-  a. cd cmake_targets/lte_build_oai/build 
-  b. ./lte-softmodem -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_SeNB.conf
-4. In the mUE host:
-  a. cd cmake_targets/ran_build/build 
-  b. ./lte-uesoftmodem -C 2680000000 -r 50 --ue-rxgain 125 --ue-txgain 0 --ue-scan-carrier --ue-max-power 0 --nokrnmod 1 -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_mue.conf
-5. In the sUE host:
-  a. cd cmake_targets/ran_build/build 
-  b. ./lte-uesoftmodem -C 2630000000 -r 50 --ue-rxgain 125 --ue-txgain 0 --ue-scan-carrier --ue-max-power 0 --nokrnmod 1 -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_sue.conf
-6. Start the iperf3 server in the mUE host
-7. Start the iperf3 client in the EPC host
+In the MN host: 
+2. cd cmake_targets/lte_build_oai/build 
+3. ./lte-softmodem -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_MeNB.conf
+In the SN host: 
+4. cd cmake_targets/lte_build_oai/build 
+5. ./lte-softmodem -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_SeNB.conf
+In the mUE host:
+6. cd cmake_targets/ran_build/build 
+7. ./lte-uesoftmodem -C 2680000000 -r 50 --ue-rxgain 125 --ue-txgain 0 --ue-scan-carrier --ue-max-power 0 --nokrnmod 1 -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_mue.conf
+In the sUE host:
+8. cd cmake_targets/ran_build/build 
+9. ./lte-uesoftmodem -C 2630000000 -r 50 --ue-rxgain 125 --ue-txgain 0 --ue-scan-carrier --ue-max-power 0 --nokrnmod 1 -O /root/DC_Flow_Control/ci-scripts/conf_files/dc_sue.conf
+10. Start the iperf3 server in the mUE host
+11. Start the iperf3 client in the EPC host
 
 For any question, please send an email to carlos.pupiales@upc.edu
