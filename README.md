@@ -1,10 +1,10 @@
 # DC_Flow_Control
-Implementation of Dual Connectivity and flow control algorithms
+Implementation of Dual Connectivity and flow control algorithms to test traffic aggregation. Please read our article for further details: https://ieeexplore.ieee.org/document/9514878
 
 # Content Description
 You will find the code for the eNB and for the UE in two separare branches, i.e., BS and UE, respectively.
 Each branch has the necessary features to run the Data Planes aspects of Dual Connectiviy.
-To sucessully use this implementation you need two hosts for the eNBs, two hosts for UEs, a and one host for the EPC.
+To sucessully use this implementation, you need two hosts for the eNBs, two hosts for UEs, and one host for the EPC.
 
 # Software/Hardware Requirements
 OAI supports certain hardware and software configuration, please checkout the following link for more information: https://gitlab.eurecom.fr/oai/openairinterface5g/-/wikis/OpenAirSystemRequirements
@@ -14,7 +14,7 @@ However, we have tested our implementation using:
 3. USRP B205mini
 4. Iperf3 v3.9
 
-# Build Instructions for eNB
+# Build Instructions for eNBs
 1. git clone https://github.com/Carlitops/DC_Flow_Control.git
 2. cd DC_Flow_Control
 3. git checkout BS
@@ -22,14 +22,14 @@ However, we have tested our implementation using:
 5. cd cmake_targets
 6. ./build_oai -I -w USRP --eNB
 
-# Build Instructions for UE
+# Build Instructions for UEs
 1. git clone https://github.com/Carlitops/DC_Flow_Control.git
 2. cd DC_Flow_Control
 2. git checkout UE
 3. source oaienv
 4. cd cmake_targets
 5. ./build_oai -I -w USRP --UE
-6. Install iperf3
+6. Install iperf3 in the hosts which works as mUE
 
 # Build Instructions for EPC
 1. Please follow this link for further details https://mosaic5g.io/resources/mosaic5g-oai-snaps-tutorial.pdf
